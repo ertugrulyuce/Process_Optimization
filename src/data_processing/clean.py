@@ -231,7 +231,9 @@ def write_report(df_raw, df, log, summary):
 
     w("## Etki\n")
     w(f"- Girdi: **{df_raw.shape[0]:,} x {df_raw.shape[1]}**")
-    w(f"- Cikti: **{df.shape[0]:,} x {df.shape[1]}** (3 flag + 1 seq kolonu eklendi)")
+    added = [f"`{c}`" for c in df.columns if c not in df_raw.columns]
+    w(f"- Cikti: **{df.shape[0]:,} x {df.shape[1]}** ({len(added)} kolon eklendi: "
+      f"{', '.join(added)}; R3 ile {len(log['R3_dropped'])} kolon dusuruldu)")
     w(f"- **R3** dusurulen kolon: {log['R3_dropped']}")
     w(f"- **R1** NaN'a cevrilen sifir: **{log['R1_zeros_to_nan']:,}** hucre")
     w(f"- **R2** NaN'a cevrilen negatif: **{log['R2_negatives_to_nan']:,}** hucre")

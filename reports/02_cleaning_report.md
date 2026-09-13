@@ -19,7 +19,7 @@ Uretildi: `python src/data_processing/clean.py`
 ## Etki
 
 - Girdi: **14,088 x 116**
-- Cikti: **14,088 x 118** (3 flag + 1 seq kolonu eklendi)
+- Cikti: **14,088 x 118** (3 kolon eklendi: `flag_dup_timestamp`, `seq`, `flag_downtime`; R3 ile 1 kolon dusuruldu)
 - **R3** dusurulen kolon: ['Machine4.Temperature4.C.Actual']
 - **R1** NaN'a cevrilen sifir: **78,539** hucre
 - **R2** NaN'a cevrilen negatif: **126** hucre
