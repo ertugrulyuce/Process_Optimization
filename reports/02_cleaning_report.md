@@ -13,8 +13,8 @@ Uretildi: `python src/data_processing/clean.py`
 | R4 | Duplicate timestamp'ler isaretlendi, satir silinmedi (veri kaybi olmasin) |
 | R5 | Stage1 setpoint == 0 olan satirlar durus blogu olarak isaretlendi (K3) |
 | R6 | Gecerli veri orani < %50 olan output'lar 'kapsam disi' isaretlendi (A3) |
-| R7 | abs(setpoint) < dev_std olan output'lar 'setpoint anlamsiz' olarak kapsam disi birakildi -- oransal KPI'lari tanimsiz (A8) |
-| R8 | setpoint'in %1'inden kucuk (ama sifir olmayan) olcumler -> NaN. Float underflow artifakti; sadece '== 0' testi bunlari kaciriyordu. |
+| R7 | abs(setpoint)/dev_std < 1.0 olan output'lar 'setpoint anlamsiz' olarak kapsam disi birakildi -- oransal KPI'lari tanimsiz (A8) |
+| R8 | abs(olcum) < 0.01 x abs(setpoint) olan (ama sifir olmayan) olcumler -> NaN. Float underflow artifakti; sadece '== 0' testi bunlari kaciriyordu. |
 
 ## Etki
 

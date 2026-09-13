@@ -17,14 +17,15 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent))
 import schema  # noqa: E402
+# K2: bu esigin altinda gecerli verisi olan output modellenemez (A3). Esik
+# audit.py'de tanimli; burada ayrica yazilirsa audit'in "modellenemez" listesi
+# ile R6 kapsami sessizce ayrisabilir.
+from audit import MIN_VALID_RATIO  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 RAW = ROOT / "data" / "raw" / "continuous_factory_process.csv"
 PROC = ROOT / "data" / "processed"
 REPORT = ROOT / "reports" / "02_cleaning_report.md"
-
-# K2: bu esigin altinda gecerli verisi olan output modellenemez (A3)
-MIN_VALID_RATIO = 0.50
 
 # Bir setpoint'in anlamli hedef sayilabilmesi icin, sapmanin standart
 # sapmasindan buyuk olmasi gerekir. Altinda kalirsa hedef olcum gurultusunden
@@ -55,13 +56,18 @@ CLEANING_RULES = {
     "R3": "Birebir ozdes kolon dusuruldu (K8: yapay multicollinearity)",
     "R4": "Duplicate timestamp'ler isaretlendi, satir silinmedi (veri kaybi olmasin)",
     "R5": "Stage1 setpoint == 0 olan satirlar durus blogu olarak isaretlendi (K3)",
-    "R6": "Gecerli veri orani < %50 olan output'lar 'kapsam disi' isaretlendi (A3)",
+    # R6-R8 metinleri esiklerden uretiliyor: esik degisip metin eski kalirsa
+    # rapordaki kural tablosu kodun yapmadigi bir seyi anlatir.
+    "R6": f"Gecerli veri orani < %{MIN_VALID_RATIO * 100:.0f} olan output'lar "
+          "'kapsam disi' isaretlendi (A3)",
     # not: 'abs(setpoint)' yazimi bilincli -- '|setpoint|' markdown tablosunda
     # hucre ayraci sanilip satiri bolerdi.
-    "R7": "abs(setpoint) < dev_std olan output'lar 'setpoint anlamsiz' olarak "
-          "kapsam disi birakildi -- oransal KPI'lari tanimsiz (A8)",
-    "R8": "setpoint'in %1'inden kucuk (ama sifir olmayan) olcumler -> NaN. "
-          "Float underflow artifakti; sadece '== 0' testi bunlari kaciriyordu.",
+    "R7": f"abs(setpoint)/dev_std < {MIN_SETPOINT_TO_STD} olan output'lar "
+          "'setpoint anlamsiz' olarak kapsam disi birakildi -- oransal KPI'lari "
+          "tanimsiz (A8)",
+    "R8": f"abs(olcum) < {TINY_FRAC} x abs(setpoint) olan (ama sifir olmayan) "
+          "olcumler -> NaN. Float underflow artifakti; sadece '== 0' testi "
+          "bunlari kaciriyordu.",
 }
 
 
@@ -130,8 +136,8 @@ def build_kpis(df):
     kpi = pd.DataFrame(index=df.index)
     rows = []
 
-    for st in ("Stage1", "Stage2"):
-        for i in range(15):
+    for st in schema.STAGES:
+        for i in range(schema.N_MEASUREMENTS):
             a_col = f"{st}.Output.Measurement{i}.U.Actual"
             s_col = f"{st}.Output.Measurement{i}.U.Setpoint"
             name = f"{st}.M{i}"
@@ -276,7 +282,7 @@ def write_report(df_raw, df, log, summary):
     lo, hi = BIAS_BAND
 
     w("## Kapsam\n")
-    w(f"30 output'un **{len(ins)}**'i analize giriyor. Kapsam disi kalanlar, "
+    w(f"{schema.N_OUTPUTS} output'un **{len(ins)}**'i analize giriyor. Kapsam disi kalanlar, "
       "hangi gerekceyle cikarildiklariyla birlikte:\n")
     w("| output | gerekce |")
     w("|---|---|")
@@ -341,7 +347,7 @@ def main():
     print(f"R3 dusurulen kolon: {log['R3_dropped']}")
     print(f"R4 dup timestamp  : {log['R4_dup_rows']} satir (isaretlendi)")
     print(f"R5 durus blogu    : {log['R5_downtime_rows']} satir (isaretlendi)")
-    print(f"\nkapsam ici output : {len(ins)}/30")
+    print(f"\nkapsam ici output : {len(ins)}/{schema.N_OUTPUTS}")
     for reason, n in summary[summary.in_scope != "evet"].scope_reason.value_counts().items():
         print(f"  kapsam disi ({n}): {reason}")
     print()

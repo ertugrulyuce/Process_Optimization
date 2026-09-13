@@ -15,10 +15,9 @@ import pytest
 
 import audit
 import clean
+import schema
 from conftest import ROOT
 
-STAGES = ("Stage1", "Stage2")
-N_MEASUREMENTS = 15
 N = 200  # build_kpis tablolarinin satir sayisi; _pattern icin cift olmali
 ACT = "Stage1.Output.Measurement0.U.Actual"
 
@@ -48,8 +47,8 @@ def _full(setpoint=10.0):
     degistirir.
     """
     data = {}
-    for st in STAGES:
-        for i in range(N_MEASUREMENTS):
+    for st in schema.STAGES:
+        for i in range(schema.N_MEASUREMENTS):
             data[f"{st}.Output.Measurement{i}.U.Setpoint"] = np.full(N, setpoint)
             data[f"{st}.Output.Measurement{i}.U.Actual"] = setpoint + _pattern()
     return pd.DataFrame(data)
@@ -151,7 +150,7 @@ def test_full_table_is_in_scope_by_default():
     """Yardimci tablonun kendisi dogru mu -- asagidaki testler buna dayaniyor."""
     _, summary = clean.build_kpis(_full())
 
-    assert len(summary) == len(STAGES) * N_MEASUREMENTS
+    assert len(summary) == schema.N_OUTPUTS
     assert (summary.in_scope == "evet").all()
 
 
@@ -249,7 +248,7 @@ def test_committed_kpi_summary_matches_thresholds():
     summary = pd.read_csv(ROOT / "reports" / "output_kpi_summary.csv")
     lo, hi = clean.BIAS_BAND
 
-    assert len(summary) == len(STAGES) * N_MEASUREMENTS
+    assert len(summary) == schema.N_OUTPUTS
     for r in summary.itertuples():
         in_scope = (r.valid_pct >= clean.MIN_VALID_RATIO * 100
                     and r.sp_over_std >= clean.MIN_SETPOINT_TO_STD)

@@ -47,8 +47,8 @@ def sec_time(df):
 
 def sec_outputs(df):
     rows = []
-    for st in ("Stage1", "Stage2"):
-        for i in range(15):
+    for st in schema.STAGES:
+        for i in range(schema.N_MEASUREMENTS):
             a = df[f"{st}.Output.Measurement{i}.U.Actual"]
             s = df[f"{st}.Output.Measurement{i}.U.Setpoint"]
             zero = a == 0

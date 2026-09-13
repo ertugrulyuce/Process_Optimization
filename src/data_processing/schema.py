@@ -21,6 +21,13 @@ MEASURED    = "measured"      # proses tepkisi -> ne girdi ne cikti; teshis degi
 OUT_ACTUAL  = "output_actual"
 OUT_SETPNT  = "output_setpoint"
 
+# --- veri seti yapisi ---
+# Her asama 15 boyutsal olcum uretir: `{stage}.Output.Measurement{i}.U.Actual`
+# ve ayni adla `.Setpoint`. Audit, temizlik ve raporlar bu sayilara dayaniyor.
+STAGES          = ("Stage1", "Stage2")
+N_MEASUREMENTS  = 15
+N_OUTPUTS       = len(STAGES) * N_MEASUREMENTS
+
 
 def classify(col: str) -> str:
     if col == TIME:
