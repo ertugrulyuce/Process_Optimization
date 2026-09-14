@@ -33,6 +33,10 @@ OUT = ROOT / "reports" / "03_capability_report.md"
 # I-MR sabiti: n=2 icin d2. sigma_st = MR_bar / d2
 D2_N2 = 1.128
 
+# Bundan az gecerli olcumu olan seri icin I-MR istatistigi uretilmez; output
+# tabloya girmez ve raporda adiyla listelenir.
+MIN_N_IMR = 10
+
 # A4: veride spec limit YOK. Cp/Cpk mutlak hukum icin degil, output'lar arasi
 # karsilastirma icin uretiliyor. Tek bir keyfi limit yerine uc senaryo:
 SPEC_SCENARIOS = {"dar (+/-%1)": 0.01, "orta (+/-%2)": 0.02, "genis (+/-%5)": 0.05}
@@ -45,9 +49,15 @@ def load():
 
 
 def imr_stats(x: pd.Series) -> dict:
-    """I-MR kontrol grafigi istatistikleri. NaN'lar atlanir."""
+    """
+    I-MR kontrol grafigi istatistikleri. NaN'lar atlanir.
+
+    Gecerli olcum MIN_N_IMR'den azsa bos dict doner. Seri sabitse (butun
+    moving range'ler 0) sigma_st = 0 olur: limitler ortalamaya coker,
+    lt_st_ratio tanimsizdir (NaN) ve capability() Cp/Cpk hesaplamaz.
+    """
     v = x.dropna()
-    if len(v) < 10:
+    if len(v) < MIN_N_IMR:
         return {}
     mr = v.diff().abs().dropna()
     mr_bar = float(mr.mean())
@@ -62,15 +72,30 @@ def imr_stats(x: pd.Series) -> dict:
         n=len(v), mean=mu, sigma_st=sigma_st, sigma_lt=sigma_lt,
         # >1 ise long-term yayilim short-term'den genis: kayma/surukleme isareti.
         # Otokorelasyon bu orani sisirdigi icin tek basina delil sayilmaz.
-        lt_st_ratio=sigma_lt / sigma_st if sigma_st else np.nan,
+        lt_st_ratio=sigma_lt / sigma_st if sigma_st > 0 else np.nan,
         ucl=ucl, lcl=lcl, ooc=ooc, ooc_pct=100 * ooc / len(v),
         mr_bar=mr_bar,
     )
 
 
 def capability(mu, sigma_st, setpoint, tol_frac):
-    """Cp/Cpk. Spec limitleri setpoint etrafinda simetrik varsayiliyor (A4)."""
-    if not sigma_st or np.isnan(setpoint):
+    """
+    Cp/Cpk. Spec limitleri setpoint etrafinda simetrik varsayiliyor (A4).
+
+    Tanimsiz durumlar (NaN, NaN) doner; pipeline tek bir output yuzunden
+    durmaz, Cp/Cpk'si hesaplanamayan output raporda adiyla listelenir:
+      - sigma_st == 0: seri sabit. Formul sonsuz Cp ve +/-inf Cpk verir, ama
+        gercek bir proseste sifir yayilim "mukemmel yeterlilik" degil, takili
+        kalmis bir sensor ya da olcum cozunurlugu isaretidir. inf raporlansa
+        output, yayilimi yuzunden degil olcum sorunu yuzunden siralamanin
+        bir ucuna yerlesirdi.
+      - sigma_st ya da setpoint NaN: yayilim ya da spec limiti bilinmiyor.
+    Negatif sigma_st bir hesap hatasidir: isareti ters bir Cp sessizce
+    uretmek yerine ValueError firlatir.
+    """
+    if sigma_st < 0:
+        raise ValueError(f"sigma_st negatif olamaz: {sigma_st}")
+    if sigma_st == 0 or np.isnan(sigma_st) or np.isnan(setpoint):
         return np.nan, np.nan
     usl = setpoint * (1 + tol_frac)
     lsl = setpoint * (1 - tol_frac)
@@ -83,13 +108,19 @@ def main():
     df, summary = load()
     ins = summary[summary.in_scope == "evet"].copy()
 
-    rows = []
+    # Tanimsiz durumlar raporda aciklamasiz bos hucre ya da "Cpk = nan"
+    # bulgusu olarak kalmasin diye ayrica toplaniyor. sigma_st tabloda
+    # yuvarlandigi icin kontrol yuvarlamadan once yapiliyor.
+    rows, too_short, zero_spread = [], [], []
     for _, r in ins.iterrows():
         st, m = r.output.split(".")
         col = f"{st}.Output.Measurement{m[1:]}.U.Actual"
         s = imr_stats(df[col])
         if not s:
+            too_short.append(r.output)
             continue
+        if s["sigma_st"] == 0:
+            zero_spread.append(r.output)
         rec = dict(output=r.output, setpoint=r.setpoint,
                    error_type=r.error_type, **s)
         for label, tol in SPEC_SCENARIOS.items():
@@ -109,6 +140,13 @@ def main():
     w("Kaynak: `data/processed/clean_v1.csv`  ")
     w("Uretildi: `python src/analysis/capability.py`\n")
     w(f"Kapsam: {len(t)} output (Faz 1'de kapsam ici sayilanlar).\n")
+    if too_short:
+        names = ", ".join(f"`{o}`" for o in too_short)
+        w(f"> **Atlandi** (gecerli olcum < {MIN_N_IMR}): {names}\n")
+    if zero_spread:
+        names = ", ".join(f"`{o}`" for o in zero_spread)
+        w("> **Cp/Cpk hesaplanmadi** (sigma_st = 0, sabit seri -- takili sensor")
+        w(f"> ya da olcum cozunurlugu; C2-C4 bulgularina girmez): {names}\n")
 
     w("## Onemli uyari - kontrol grafiklerinin gecerliligi\n")
     w("I-MR kontrol grafigi **ardisik gozlemlerin bagimsiz oldugunu varsayar.**")
@@ -133,7 +171,8 @@ def main():
     w("seride kayma/surukleme var demektir. **Ancak** otokorelasyon `sigma_st`'yi")
     w("kucuk gosterdigi icin bu oran yukari saplidir; siralama icin kullanilabilir,")
     w("mutlak deger olarak degil.\n")
-    top = t.nlargest(8, "lt_st_ratio")[
+    # nlargest/nsmallest NaN'i atmaz, satir azsa listenin sonuna koyar
+    top = t.dropna(subset=["lt_st_ratio"]).nlargest(8, "lt_st_ratio")[
         ["output", "error_type", "sigma_st", "sigma_lt", "lt_st_ratio"]]
     w("| output | hata tipi | sigma_st | sigma_lt | lt/st |")
     w("|---|---|---|---|---|")
@@ -162,7 +201,8 @@ def main():
     w("")
 
     mid = f"Cpk {list(SPEC_SCENARIOS)[1]}"
-    worst = t.nsmallest(5, mid)
+    ranked = t.dropna(subset=[mid])
+    worst = ranked.nsmallest(5, mid)
     w(f"> **BULGU C3 - En dusuk capability'ye sahip output'lar** (orta senaryo,")
     w("> +/-%2 tolerans):")
     for _, r in worst.iterrows():
@@ -173,7 +213,7 @@ def main():
     w("> urun sistematik olarak spec disinda uretiliyor olurdu. Bu, Faz 1'deki")
     w("> bias bulgusunun capability diliyle tekrari.\n")
 
-    var_dom = t[t.error_type == "variability"].nsmallest(5, mid)
+    var_dom = ranked[ranked.error_type == "variability"].nsmallest(5, mid)
     w("> **BULGU C4 - Optimizasyon hedefi output'larin capability'si.**")
     w("> Variability-baskin olanlar arasinda en dusuk Cpk:")
     for _, r in var_dom.iterrows():
@@ -196,6 +236,9 @@ def main():
     print(f"yazildi: {OUT}")
     print("yazildi: reports/capability_table.csv\n")
     print(f"medyan out-of-control orani: %{med_ooc:.1f}  (yontem artifakti)")
+    if too_short or zero_spread:
+        print(f"atlandi (< {MIN_N_IMR} olcum): {too_short}  "
+              f"Cp/Cpk hesaplanmadi (sigma_st = 0): {zero_spread}")
     print(f"\nen dusuk Cpk (orta senaryo):")
     print(worst[["output", "error_type", mid]].to_string(index=False))
 

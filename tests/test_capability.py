@@ -54,13 +54,17 @@ def test_imr_drops_nan_and_treats_remaining_as_consecutive():
     assert with_gap["mr_bar"] == pytest.approx(without_gap["mr_bar"])
 
 
-@pytest.mark.parametrize("n,has_stats", [(10, True), (9, False)])
+@pytest.mark.parametrize("n,has_stats", [
+    (capability.MIN_N_IMR, True),
+    (capability.MIN_N_IMR - 1, False),
+])
 def test_imr_needs_minimum_observations(n, has_stats):
     assert bool(capability.imr_stats(pd.Series(np.arange(n, dtype=float)))) is has_stats
 
 
 def test_nan_does_not_count_toward_minimum():
-    assert capability.imr_stats(pd.Series(list(np.arange(9.0)) + [np.nan] * 5)) == {}
+    valid = list(np.arange(float(capability.MIN_N_IMR - 1)))
+    assert capability.imr_stats(pd.Series(valid + [np.nan] * 5)) == {}
 
 
 def test_out_of_control_counts_points_beyond_limits():
@@ -112,6 +116,46 @@ def test_scenario_labels_match_tolerances():
     """Senaryo adi rapordaki kolon basligina yaziliyor; icindeki yuzde degerle ayni olmali."""
     for label, tol in capability.SPEC_SCENARIOS.items():
         assert f"+/-%{tol * 100:g})" in label
+
+
+# --- dejenere durumlar --------------------------------------------------------
+
+def test_constant_series_has_zero_spread():
+    """Sabit seri: limitler ortalamaya coker, lt/st orani tanimsiz, limit disi nokta yok."""
+    s = capability.imr_stats(pd.Series([5.0] * 20))
+
+    assert s["sigma_st"] == 0
+    assert s["ucl"] == s["lcl"] == 5.0
+    assert np.isnan(s["lt_st_ratio"])
+    assert s["ooc"] == 0
+
+
+@pytest.mark.parametrize("mu", [SP, 10.5])  # merkezde ve spec disinda
+def test_zero_sigma_gives_no_capability(mu):
+    """
+    sigma_st = 0 icin formul +/-inf verir. Sifir yayilim olcum sorunudur,
+    mukemmel proses degil; sonsuz bir Cpk siralamayi bozar. NaN beklenir.
+    """
+    cp, cpk = capability.capability(mu, 0.0, SP, TOL)
+    assert np.isnan(cp) and np.isnan(cpk)
+
+
+def test_constant_series_end_to_end():
+    s = capability.imr_stats(pd.Series([SP] * 20))
+    cp, cpk = capability.capability(s["mean"], s["sigma_st"], SP, TOL)
+    assert np.isnan(cp) and np.isnan(cpk)
+
+
+@pytest.mark.parametrize("sigma,setpoint", [(np.nan, SP), (SIGMA, np.nan)])
+def test_unknown_sigma_or_setpoint_gives_nan(sigma, setpoint):
+    cp, cpk = capability.capability(SP, sigma, setpoint, TOL)
+    assert np.isnan(cp) and np.isnan(cpk)
+
+
+def test_negative_sigma_is_an_error():
+    """Negatif sigma bir hesap hatasi; isareti ters Cp sessizce uretilmemeli."""
+    with pytest.raises(ValueError, match="negatif"):
+        capability.capability(SP, -SIGMA, SP, TOL)
 
 
 # --- rapor tutarliligi --------------------------------------------------------
