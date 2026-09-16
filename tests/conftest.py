@@ -13,3 +13,6 @@ ROOT = Path(__file__).resolve().parents[1]
 
 for sub in ("data_processing", "analysis", "modeling", "optimization"):
     sys.path.insert(0, str(ROOT / "src" / sub))
+
+# run_all.py repo kokunde duruyor; testler onu da import ediyor.
+sys.path.insert(0, str(ROOT))
