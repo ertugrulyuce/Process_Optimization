@@ -42,3 +42,16 @@ jobs:
 
       - name: Testler
         run: pytest
+
+      # Makefile bir kisayol; dogrulanmazsa sessizce bozulur (gelistiricilerin
+      # cogu Windows'ta, make'siz calisiyor). `make test` gercekten calistirilip
+      # komutlarinin dogru oldugu gorulur -- yukaridaki adimlarla ayni isi
+      # tekrar yapar, birkac saniye. Testlerin sessizce atlanmasi riski yok:
+      # pytest zaten yukarida dogrudan calisti.
+      # run/clean yalnizca -n ile cozulur: ikisi de ham veriyi ya da uretilen
+      # ciktilari gerektiriyor, CI'da ikisi de yok.
+      - name: Makefile hedefleri
+        run: |
+          make help
+          make test
+          make -n run clean

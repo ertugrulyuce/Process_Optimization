@@ -60,8 +60,18 @@ kaydedin.
 ## Çalıştırma
 
 ```bash
-python run_all.py         # 12 adım, ~6 dakika
-python run_all.py --keep  # temizlemeden çalıştır
+make test    # import kontrolü + pytest (ham veri gerekmez)
+make run     # tüm pipeline — 12 adım, ~6 dakika
+make clean   # yalnızca üretilen çıktıları sil
+```
+
+`make` kurulu değilse aynı komutlar doğrudan çalıştırılabilir:
+
+```bash
+python run_all.py                # temizle + 12 adım
+python run_all.py --keep         # temizlemeden çalıştır
+python run_all.py --only clean   # tek adım — temizlik yapılmaz
+python run_all.py --list         # adımları listele
 ```
 
 Adımlar sırayla: veri denetimi → A1 varsayım testi → temizlik + KPI → değişken
@@ -87,7 +97,8 @@ reports/           9 üretilen rapor + figürler (script çıktısı)
 docs/              technical_report, assumptions, plan_v0_original
 tests/             pytest — veriye dokunmayan birim testleri
 tools/             check_imports — CI'nin import zincirini doğrulaması
-run_all.py
+run_all.py         pipeline sürücüsü — `--only` ile tek adım
+Makefile           make test / run / clean kısayolları
 ```
 
 ## Metodolojik duruş
