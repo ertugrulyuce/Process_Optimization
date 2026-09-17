@@ -9,14 +9,15 @@ uygulanan her kural rapora islenir.
 
 Calistirma:  python src/data_processing/clean.py
 """
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent))
 import schema  # noqa: E402
+
 # K2: bu esigin altinda gecerli verisi olan output modellenemez (A3). Esik
 # audit.py'de tanimli; burada ayrica yazilirsa audit'in "modellenemez" listesi
 # ile R6 kapsami sessizce ayrisabilir.

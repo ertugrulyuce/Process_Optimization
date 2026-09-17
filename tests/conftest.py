@@ -6,8 +6,8 @@ icin duz dizin olarak tasarlandi). Testlerin ayni import'lari kullanabilmesi
 icin alt dizinleri sys.path'e ekliyoruz -- boylece test kodu, script'lerin
 calisma zamaninda gordugu yolun aynisini goruyor.
 """
-from pathlib import Path
 import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 

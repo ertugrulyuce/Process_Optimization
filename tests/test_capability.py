@@ -9,11 +9,10 @@ hesaplanabilen serilerle kuruldu; ham veriye dokunmaz.
 """
 import math
 
+import capability
 import numpy as np
 import pandas as pd
 import pytest
-
-import capability
 from conftest import ROOT
 
 # Cp/Cpk testleri icin: USL 10.2, LSL 9.8, bant genisligi 0.4, 3*sigma 0.15

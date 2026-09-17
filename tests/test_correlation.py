@@ -8,11 +8,10 @@ sessiz bir hata, rapordaki butun anlamlilik ifadelerini gecersiz kilar.
 Testler ham veriye dokunmaz; formuller elle hesaplanabilen girdilerle
 sabitlenir.
 """
+import correlation
 import numpy as np
 import pandas as pd
 import pytest
-
-import correlation
 from conftest import ROOT
 
 

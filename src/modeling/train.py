@@ -24,9 +24,9 @@ karsilastirilir ve **beceri skoru** raporlanir:
 
 Calistirma:  python src/modeling/train.py
 """
-from pathlib import Path
 import sys
 import warnings
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -34,10 +34,9 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src" / "modeling"))
 sys.path.insert(0, str(ROOT / "src" / "data_processing"))
-import schema      # noqa: E402
-import splits      # noqa: E402
-
-from sklearn.ensemble import RandomForestRegressor, HistGradientBoostingRegressor  # noqa: E402
+import schema  # noqa: E402
+import splits  # noqa: E402
+from sklearn.ensemble import HistGradientBoostingRegressor, RandomForestRegressor  # noqa: E402
 from sklearn.inspection import permutation_importance  # noqa: E402
 from sklearn.linear_model import Ridge  # noqa: E402
 from sklearn.pipeline import make_pipeline  # noqa: E402

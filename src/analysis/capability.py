@@ -16,8 +16,8 @@ PROSES DEGIL, YONTEM ARTIFAKTIDIR ve oyle raporlanir.
 
 Calistirma:  python src/analysis/capability.py
 """
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -156,7 +156,7 @@ def main():
     w("- kontrol limitleri gercekte olmasi gerekenden **dar** olur,")
     w("- ve seri, gercekte kararli olsa bile surekli limit disina tasar.\n")
     med_ooc = t.ooc_pct.median()
-    w(f"> **BULGU C1 - Out-of-control oranlari yontem artifaktidir.** Medyan")
+    w("> **BULGU C1 - Out-of-control oranlari yontem artifaktidir.** Medyan")
     w(f"> out-of-control orani **%{med_ooc:.1f}**. Gercek bir prosesde bu oran")
     w("> %0.3 civarinda olmali. Bu fark prosesin kontrolsuz oldugunu degil,")
     w("> **I-MR grafiginin bu veri icin uygun arac olmadigini** gosterir.")
@@ -203,7 +203,7 @@ def main():
     mid = f"Cpk {list(SPEC_SCENARIOS)[1]}"
     ranked = t.dropna(subset=[mid])
     worst = ranked.nsmallest(5, mid)
-    w(f"> **BULGU C3 - En dusuk capability'ye sahip output'lar** (orta senaryo,")
+    w("> **BULGU C3 - En dusuk capability'ye sahip output'lar** (orta senaryo,")
     w("> +/-%2 tolerans):")
     for _, r in worst.iterrows():
         w(f">   - `{r.output}` ({r.error_type}): Cpk = **{r[mid]}**")
@@ -239,7 +239,7 @@ def main():
     if too_short or zero_spread:
         print(f"atlandi (< {MIN_N_IMR} olcum): {too_short}  "
               f"Cp/Cpk hesaplanmadi (sigma_st = 0): {zero_spread}")
-    print(f"\nen dusuk Cpk (orta senaryo):")
+    print("\nen dusuk Cpk (orta senaryo):")
     print(worst[["output", "error_type", mid]].to_string(index=False))
 
 

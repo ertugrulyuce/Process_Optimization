@@ -10,9 +10,9 @@ tum modulleri import ederek kirilmayi CI'da yakalar.
 Moduller isi `if __name__ == "__main__"` altinda yaptigi icin import etmek
 veri dosyasi gerektirmez; CI'da ham veri yok.
 """
-from pathlib import Path
 import importlib
 import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SUBDIRS = ("data_processing", "analysis", "modeling", "optimization")

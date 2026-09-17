@@ -21,9 +21,9 @@ yerine gecmez.
 
 Calistirma:  python src/optimization/optimize.py
 """
-from pathlib import Path
 import sys
 import warnings
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -31,10 +31,9 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src" / "modeling"))
 sys.path.insert(0, str(ROOT / "src" / "data_processing"))
-import schema   # noqa: E402
-import splits   # noqa: E402
-
-from sklearn.ensemble import RandomForestRegressor, HistGradientBoostingRegressor  # noqa: E402
+import schema  # noqa: E402
+import splits  # noqa: E402
+from sklearn.ensemble import HistGradientBoostingRegressor, RandomForestRegressor  # noqa: E402
 
 warnings.filterwarnings("ignore")
 

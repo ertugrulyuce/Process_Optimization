@@ -10,7 +10,6 @@ testle sabitlendi.
 import csv
 
 import pytest
-
 import schema
 from conftest import ROOT
 

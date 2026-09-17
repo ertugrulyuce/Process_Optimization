@@ -7,8 +7,8 @@ veriyle senkron kalir.
 
 Calistirma:  python src/data_processing/data_dictionary.py
 """
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import numpy as np
 import pandas as pd

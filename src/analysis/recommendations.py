@@ -15,8 +15,8 @@ gozlenen etki buyuklugu + bagimsiz gozlem maliyeti -> gereken deney buyuklugu.
 
 Calistirma:  python src/analysis/recommendations.py
 """
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -24,8 +24,8 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src" / "modeling"))
 sys.path.insert(0, str(ROOT / "src" / "data_processing"))
-import schema   # noqa: E402
-import splits   # noqa: E402
+import schema  # noqa: E402
+import splits  # noqa: E402
 
 PROC = ROOT / "data" / "processed" / "clean_v1.csv"
 OUT = ROOT / "reports" / "09_recommendations.md"
@@ -298,7 +298,7 @@ def write_report(df, kpi, eff, fold, cpps, block_len, targets):
     w("> **Bu seviyeler proses guvenligi ve urun kalitesi acisindan proses")
     w("> muhendisi tarafindan onaylanmadan uygulanmamalidir.** Buradaki")
     w("> oneri istatistikseldir, fiziksel fizibilite degerlendirmesi degildir.\n")
-    w(f"Her kosu ~5 dakika (K13: transport delay ~270 sn + dengelenme payi),")
+    w("Her kosu ~5 dakika (K13: transport delay ~270 sn + dengelenme payi),")
     w(f"{2**(len(cpps)-1)} kosul x 3 replikasyon = "
       f"**{2**(len(cpps)-1)*3} kosu ≈ {2**(len(cpps)-1)*3*5/60:.0f} saat**")
     w("net deney suresi.\n")

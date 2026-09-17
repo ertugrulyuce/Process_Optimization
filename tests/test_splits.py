@@ -10,7 +10,6 @@ aralarinda tam embargo kadar satir bulunmali.
 import numpy as np
 import pandas as pd
 import pytest
-
 import splits
 
 

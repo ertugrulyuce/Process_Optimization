@@ -10,8 +10,8 @@ Pipeline surucusunun iki tehlikeli yani var:
 
 Ikisi de burada sabitlendi. Testler alt surec calistirmaz.
 """
-from pathlib import Path
 import types
+from pathlib import Path
 
 import pytest
 

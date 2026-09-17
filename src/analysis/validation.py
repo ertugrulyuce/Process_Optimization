@@ -22,9 +22,9 @@ Uc ayri dayaniklilik testi:
 
 Calistirma:  python src/analysis/validation.py
 """
-from pathlib import Path
 import sys
 import warnings
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -32,10 +32,9 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src" / "modeling"))
 sys.path.insert(0, str(ROOT / "src" / "data_processing"))
-import schema   # noqa: E402
-import splits   # noqa: E402
-
-from sklearn.ensemble import RandomForestRegressor, HistGradientBoostingRegressor  # noqa: E402
+import schema  # noqa: E402
+import splits  # noqa: E402
+from sklearn.ensemble import HistGradientBoostingRegressor, RandomForestRegressor  # noqa: E402
 
 warnings.filterwarnings("ignore")
 
@@ -181,7 +180,7 @@ def write_report(v1, v2, v3, targets, param, embargo, cpp_lags, df_len):
 
     # ---- V0: embargo hesabinin kendisi bir bulgu ----
     w("## V0 - Embargo hesabi beklenmedik bir sey gosterdi\n")
-    w(f"Embargo, karar degiskenlerinin otokorelasyonunun 0.2 altina indigi")
+    w("Embargo, karar degiskenlerinin otokorelasyonunun 0.2 altina indigi")
     w(f"mesafeye gore secilir. Aktif CPP'ler icin bu deger **{embargo} satir**")
     w("cikti. Faz 3'te 24 `controlled` kolonun medyani 49 satirdi.\n")
     w("| parametre | sonumlenme lag'i | durum |")

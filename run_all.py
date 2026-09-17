@@ -16,11 +16,11 @@ Calistirma:
     python run_all.py --list             # adimlari listele
     python run_all.py --clean            # yalnizca uretilen ciktilari sil
 """
-from pathlib import Path
 import argparse
 import subprocess
 import sys
 import time
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 

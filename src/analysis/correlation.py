@@ -25,8 +25,8 @@ iliski raporlar. Bu, bu veri setiyle yapilan calismalarda en yaygin hatadir.
 
 Calistirma:  python src/analysis/correlation.py
 """
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -212,7 +212,7 @@ def main():
     w("> buyuklugune ragmen istatistiksel olarak kucuk bir ornektir (K1).\n")
 
     w("## Karar degiskenlerinin durumu\n")
-    w(f"K7 geregi yalnizca gercekten oynatilmis degiskenler bilgi tasiyabilir.")
+    w("K7 geregi yalnizca gercekten oynatilmis degiskenler bilgi tasiyabilir.")
     w(f"**Aktif (CV >= %1): {len(active)}**, **pasif: {len(inactive)}**.\n")
     w("| degisken | CV % | durum |")
     w("|---|---|---|")

@@ -28,8 +28,8 @@ secerken dogrudan onemlidir.
 
 Calistirma:  python src/data_processing/verify_a1.py
 """
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
