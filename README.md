@@ -48,6 +48,13 @@ Python 3.11 veya uzeri gerekir (numpy 2.x ve pandas 2.2 bagimliligi).
 pip install -r requirements.txt
 ```
 
+Geliştirme için ek olarak:
+
+```bash
+pip install -r requirements-dev.txt
+pre-commit install   # commit öncesi ruff — isteğe bağlı, aynı kurallar CI'da da çalışır
+```
+
 Ham CSV'yi Kaggle'dan indirip `data/raw/continuous_factory_process.csv` olarak
 kaydedin.
 

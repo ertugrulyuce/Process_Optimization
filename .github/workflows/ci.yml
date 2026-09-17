@@ -1,9 +1,10 @@
-# CI: testler + import kontrolu.
+# CI: lint + testler + import kontrolu.
 #
 # Ham veri repoda yok (bkz. .gitignore), bu yuzden CI pipeline'i CALISTIRMAZ.
-# Calistirilabilecek iki sey var: (1) veriye dokunmayan testler, (2) her
-# modulun import edilebilirligi -- src/ duz dizin yapisinda oldugu icin
-# (paket degil) bir dosya tasindiginda import zinciri sessizce kirilabiliyor.
+# Calistirilabilecek uc sey var: (1) ruff (kural seti ruff.toml icinde),
+# (2) veriye dokunmayan testler, (3) her modulun import edilebilirligi --
+# src/ duz dizin yapisinda oldugu icin (paket degil) bir dosya tasindiginda
+# import zinciri sessizce kirilabiliyor.
 name: CI
 
 on:
@@ -36,6 +37,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: ruff check .
 
       - name: Import kontrolu
         run: python tools/check_imports.py

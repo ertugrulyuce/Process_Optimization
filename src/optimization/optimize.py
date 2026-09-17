@@ -199,8 +199,9 @@ def main():
 def write_report(df, opt, emp_tables, sens_tables, cpps, targets):
     L = []
     w = L.append
-    short = lambda c: (c.replace(".C.Actual", "")
-                        .replace("FirstStage.CombinerOperation", "Combiner"))
+    def short(c):
+        return (c.replace(".C.Actual", "")
+                 .replace("FirstStage.CombinerOperation", "Combiner"))
 
     w("# Faz 4 - Dar Kapsamli Optimizasyon\n")
     w("Kaynak: `data/processed/clean_v1.csv`  ")

@@ -164,8 +164,9 @@ def leakage_demo(df, target, dvs, embargo):
     m = y.notna() & X.notna().all(axis=1)
     Xv, yv = X[m].reset_index(drop=True), y[m].reset_index(drop=True)
     n = len(yv)
-    mk = lambda: RandomForestRegressor(n_estimators=100, min_samples_leaf=5,
-                                       random_state=RANDOM_STATE, n_jobs=-1)
+    def mk():
+        return RandomForestRegressor(n_estimators=100, min_samples_leaf=5,
+                                     random_state=RANDOM_STATE, n_jobs=-1)
 
     Xtr, Xte, ytr, yte = train_test_split(Xv, yv, test_size=TEST_FRAC,
                                           random_state=RANDOM_STATE)
@@ -393,7 +394,6 @@ def write_report(res, imp, ins, demo, demo_target, embargo, dvs, measured, dfe):
 
     # --- sonuc ---
     w("## Faz 3 sonucu\n")
-    ok_s1 = pos_mean > 0
     w("| Soru | Cevap |")
     w("|---|---|")
     w(f"| S1 - Karar degiskenleri aciklıyor mu? | "

@@ -51,7 +51,7 @@ def test_single_step_selection():
 
 
 def test_selection_keeps_pipeline_order_not_the_order_typed():
-    """Adimlar birbirinin ciktisini okuyor; ters sirada calistirmak sizinti degil, eski veri uretir."""
+    """Adimlar birbirinin ciktisini okuyor; ters sirada calistirmak eski veri uretir."""
     picked = run_all.select_steps("capability,clean")
 
     assert [Path(s).stem for s, _ in picked] == ["clean", "capability"]
