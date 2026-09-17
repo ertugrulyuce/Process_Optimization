@@ -1,0 +1,24 @@
+# ruff yapilandirmasi.
+#
+# Kural seti bilincli olarak dar: E (pycodestyle hatalari), F (pyflakes),
+# W (uyarilar), I (import sirasi). Denenip ELENENLER, gerekceleriyle:
+#
+#   C4     `dict(output=..., n=...)` cagrilari bu repoda bilincli bir uslup --
+#          tablo satiri kurmanin okunakli hali. 26 yerde gecen bu kalibi {}
+#          ile degistirmek okunurluk kazanci saglamaz.
+#   RUF001 Turkce metinlerdeki karakterleri "belirsiz unicode" sayiyor.
+#          Raporlar Turkce yazildigi icin tamami yanlis pozitif.
+#   B905   zip(..., strict=...) eklemek davranis degisikligidir; her cagrinin
+#          uzunluk esitligi ayri ayri dusunulmeli, toplu uygulanamaz.
+#   RUF100 Kullanilmayan noqa'lari siliyor. Bu repoda noqa satirlari
+#          gerekceli (`# noqa: BLE001 -- hangi hata olursa olsun raporlanmali`);
+#          otomatik silme gerekceyi de goturur.
+#
+# Satir siniri 100: kod tabaninda 88'i asan 53 satir var, 100'u asan yalnizca
+# 1 taneydi. 100, mevcut uslubu tarif eden sinir -- yeniden bicimlendirme
+# gerektirmiyor.
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "W", "I"]

@@ -1,0 +1,13 @@
+# Commit oncesi ruff. Kurulum:
+#     pip install -r requirements-dev.txt
+#     pre-commit install
+#
+# Kanca yalnizca commit'lenen dosyalara bakar. Kurallar CI'da tum repo uzerinde
+# ayrica calisiyor, yani kancayi kurmayan biri de ayni kurallara tabi.
+# Kural seti ve gerekceleri ruff.toml icinde.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.8
+    hooks:
+      - id: ruff-check
+        args: [--fix]

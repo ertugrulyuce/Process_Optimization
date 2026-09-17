@@ -60,6 +60,7 @@ kaydedin.
 ## Çalıştırma
 
 ```bash
+make lint    # ruff — kural seti ve gerekçeleri ruff.toml içinde
 make test    # import kontrolü + pytest (ham veri gerekmez)
 make run     # tüm pipeline — 12 adım, ~6 dakika
 make clean   # yalnızca üretilen çıktıları sil
