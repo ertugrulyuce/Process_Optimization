@@ -195,3 +195,64 @@ def test_committed_points_stay_inside_the_observed_ranges():
         for param, (lo, hi) in ranges.items():
             value = float(row[param])
             assert lo - 0.01 <= value <= hi + 0.01, (row.output, param, value)
+
+
+# --- cozum bulunamadiginda ----------------------------------------------------
+
+def test_no_active_parameter_is_reported_clearly():
+    """Hicbir parametre oynatilmamissa arama uzayi tek noktaya coker."""
+    with pytest.raises(optimize.NoSolutionError, match="aktif karar degiskeni yok"):
+        optimize.check_preconditions([], pd.DataFrame({"output": ["A"]}))
+
+
+def test_no_target_output_is_reported_clearly():
+    """Modelin bir sey yakaladigi output yoksa arama gurultuyu optimize eder."""
+    with pytest.raises(optimize.NoSolutionError, match="hedef output yok"):
+        optimize.check_preconditions([RPM], pd.DataFrame())
+
+
+def test_preconditions_pass_when_both_exist():
+    optimize.check_preconditions([RPM], pd.DataFrame({"output": ["A"]}))
+
+
+def test_main_stops_before_searching_when_there_is_no_target(tmp_path, monkeypatch):
+    """
+    Zemin yoksa main() arama yapmadan duruyor. Eskiden ilerler ve bos
+    tablolarla pandas'tan anlasilmaz bir hata alirdi.
+    """
+    proc = tmp_path / "clean_v1.csv"
+    _observed(600).to_csv(proc, index=False)
+    results = tmp_path / "modeling_results.csv"
+    pd.DataFrame({
+        "output": ["Stage2.M9"],
+        "feature_set": ["controlled"],
+        "model": ["rf"],
+        "skill_vs_pers": [-0.4],          # persistence gecilemedi
+    }).to_csv(results, index=False)
+    monkeypatch.setattr(optimize, "PROC", proc)
+    monkeypatch.setattr(optimize, "RESULTS", results)
+
+    with pytest.raises(optimize.NoSolutionError, match="persistence"):
+        optimize.main()
+
+
+def test_report_survives_when_nothing_could_be_compared(tmp_path, monkeypatch):
+    """
+    Ampirik ve duyarlilik tablolari hic uretilemediginde rapor yine de
+    yazilmali. Bu durumda eskiden iki ayri cokme vardi: bos listede
+    pd.concat ValueError firlatiyordu ve hic tanimlanmamis `consistent`
+    degiskeni NameError veriyordu.
+    """
+    out = tmp_path / "07_optimization_report.md"
+    monkeypatch.setattr(optimize, "OUT", out)
+    opt = pd.DataFrame([{
+        "output": "Stage2.M9", "error_type": "variability", "skill_vs_pers": 0.25,
+        "mevcut_bias": 0.1, "mevcut_mutlak": 0.2, "model_tahmini": 0.0,
+        "Machine1.MotorRPM": 11.0,
+    }])
+
+    optimize.write_report(_observed(), opt, {}, {}, [RPM], pd.DataFrame())
+
+    text = out.read_text(encoding="utf-8")
+    assert "Faz 4" in text
+    assert "yok" in text   # "tutarli parametre: yok" satiri yazilabilmis

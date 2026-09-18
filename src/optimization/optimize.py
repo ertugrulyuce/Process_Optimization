@@ -48,6 +48,36 @@ MIN_BIN_N = 200          # ampirik analizde bir bolgenin sayilmasi icin min gozl
 CV_ACTIVE = 1.0          # K7: aktif karar degiskeni esigi
 
 
+class NoSolutionError(RuntimeError):
+    """
+    Optimizasyonun uzerine kurulacagi zemin yok.
+
+    Bu bir cokme degil bir SONUCTUR: veri, optimizasyon icin gereken
+    kontrasti ya da tahmin gucunu tasimiyor demektir. Sessizce bos bir rapor
+    uretmek yaniltici olur -- bos tablo, "optimizasyon yapildi ama bir sey
+    bulunamadi" gibi degil, "optimizasyon yapildi" gibi okunur.
+    """
+
+
+def check_preconditions(cpps, targets):
+    """
+    Arama baslamadan once iki on kosul.
+
+    Ikisinden biri saglanmazsa arama anlamsizdir ve sonraki adimlar anlasilmaz
+    hatalarla coker (bos tabloda pd.concat, bos gruplamada idxmin). Onun
+    yerine nedeni yazan tek bir hata veriliyor.
+    """
+    if not cpps:
+        raise NoSolutionError(
+            f"aktif karar degiskeni yok (K7: CV >= %{CV_ACTIVE:.0f}). Hicbir "
+            "parametre pratikte oynatilmamis; arama uzayi tek noktaya coker.")
+    if len(targets) == 0:
+        raise NoSolutionError(
+            "hedef output yok: Faz 3'te hicbir output persistence baseline'ini "
+            "gecemedi (skill_vs_pers > 0). Modelin bir sey yakaladigi output "
+            "olmadan optimizasyon, gurultuyu optimize etmek olur.")
+
+
 def active_cpps(df):
     dvs = [c for c in schema.decision_variables(df.columns) if c in df.columns]
     return [c for c in dvs if 100 * df[c].std() / df[c].mean() >= CV_ACTIVE]
@@ -165,6 +195,7 @@ def main():
     df = pd.read_csv(PROC)
     cpps = active_cpps(df)
     targets = target_outputs()
+    check_preconditions(cpps, targets)
     rng = np.random.default_rng(RANDOM_STATE)
 
     print(f"aktif CPP: {len(cpps)} | hedef output: {len(targets)}")
@@ -289,6 +320,8 @@ def write_report(df, opt, emp_tables, sens_tables, cpps, targets):
                                    model_onerisi=val, ampirik_en_iyi=b.aralik,
                                    uzlasma="EVET" if inside else "hayir"))
     agree = pd.DataFrame(agree_rows)
+    # Asagidaki blok calismasa da sonuc tablosu bu listeyi okuyor.
+    consistent = []
     if not agree.empty:
         n_ok = int((agree.uzlasma == "EVET").sum())
         w("| output | parametre | model onerisi | ampirik en iyi dilim | uzlasma |")
@@ -455,8 +488,10 @@ def write_report(df, opt, emp_tables, sens_tables, cpps, targets):
         w("")
 
     # duyarlilik yorumu
-    allsens = pd.concat([t.assign(output=k) for k, t in sens_tables.items()
-                         if not t.empty], ignore_index=True)
+    # pd.concat bos listede ValueError firlatir; duyarlilik tablosu hic
+    # uretilemediginde rapor bu bolumu atlamali, cokmemeli.
+    frames = [t.assign(output=k) for k, t in sens_tables.items() if not t.empty]
+    allsens = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
     if not allsens.empty:
         piv = allsens.pivot(index="output", columns="varyant",
                             values="skill_vs_pers")
