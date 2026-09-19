@@ -4,3 +4,6 @@
 pytest>=8.0
 ruff>=0.16
 pre-commit>=4.0
+# Defter ciktilarini temizler. pre-commit kancasi kendi ortamini kurdugu icin
+# zorunlu degil; defteri elle temizlemek isteyen icin burada.
+nbstripout>=0.8

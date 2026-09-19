@@ -11,3 +11,11 @@ repos:
     hooks:
       - id: ruff-check
         args: [--fix]
+
+  # Defter ciktilari repoya girmez: diff'i okunamaz hale getirir ve eski bir
+  # calistirmanin goruntusu guncel sanilir. Kanca kurulmamis olsa da
+  # tests/test_notebooks.py ayni kurali CI'da dogruluyor.
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.9.1
+    hooks:
+      - id: nbstripout
