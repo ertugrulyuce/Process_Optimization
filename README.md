@@ -103,6 +103,7 @@ src/
   optimization/    optimize
 reports/           9 üretilen rapor + figürler (script çıktısı)
 docs/              technical_report, assumptions, plan_v0_original
+notebooks/         01_kesif — keşif defteri (hücre çıktıları commit edilmez)
 tests/             pytest — veriye dokunmayan birim testleri
 tools/             check_imports — CI'nin import zincirini doğrulaması
 run_all.py         pipeline sürücüsü — `--only` ile tek adım
