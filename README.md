@@ -89,6 +89,17 @@ sözlüğü → capability → korelasyon → transport delay → modelleme → 
 Tüm raporlar script çıktısıdır, elle düzenlenmez. `reports/` silinebilir ve
 yeniden üretilir; elle yazılan dokümanlar `docs/` altındadır.
 
+### Pano (isteğe bağlı)
+
+```bash
+pip install -r dashboard/requirements.txt
+make dashboard   # streamlit run dashboard/app.py
+```
+
+Pano hiçbir sayıyı yeniden hesaplamaz: `reports/` altındaki commit edilmiş
+CSV'leri okur, yani **ham veri olmadan da çalışır.** Otoriter kaynak markdown
+raporlardır; pano onların özetidir.
+
 ## Yapı
 
 ```text
@@ -104,6 +115,7 @@ src/
 reports/           9 üretilen rapor + figürler (script çıktısı)
 docs/              technical_report, assumptions, plan_v0_original
 notebooks/         01_kesif — keşif defteri (hücre çıktıları commit edilmez)
+dashboard/         Streamlit KPI panosu — reports/ CSV'lerini okur
 tests/             pytest — veriye dokunmayan birim testleri
 tools/             check_imports — CI'nin import zincirini doğrulaması
 run_all.py         pipeline sürücüsü — `--only` ile tek adım

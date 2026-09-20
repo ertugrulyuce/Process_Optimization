@@ -4,13 +4,14 @@
 PYTHON ?= python
 
 .DEFAULT_GOAL := help
-.PHONY: help lint test run clean
+.PHONY: help lint test run clean dashboard
 
 help:
-	@echo "make lint   - ruff (kural seti ve gerekceleri ruff.toml icinde)"
-	@echo "make test   - import kontrolu + pytest (ham veri gerektirmez)"
-	@echo "make run    - tum pipeline, 12 adim (ham veri gerekir)"
-	@echo "make clean  - yalnizca uretilen rapor/figur/ara veriyi sil"
+	@echo "make lint      - ruff (kural seti ve gerekceleri ruff.toml icinde)"
+	@echo "make test      - import kontrolu + pytest (ham veri gerektirmez)"
+	@echo "make run       - tum pipeline, 12 adim (ham veri gerekir)"
+	@echo "make clean     - yalnizca uretilen rapor/figur/ara veriyi sil"
+	@echo "make dashboard - KPI panosu (pip install -r dashboard/requirements.txt)"
 	@echo ""
 	@echo "tek adim    - $(PYTHON) run_all.py --only clean   (adim listesi: --list)"
 

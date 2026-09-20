@@ -1,0 +1,5 @@
+# Pano icin ek bagimlilik. Pipeline bunu gerektirmez, CI de kurmaz:
+# dashboard/data.py streamlit'siz calisir ve testleri oyle kosar.
+-r ../requirements.txt
+
+streamlit>=1.40
