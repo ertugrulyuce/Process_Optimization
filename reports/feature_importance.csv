@@ -69,8 +69,8 @@ Stage1.M10,Machine1.Zone2Temperature,0.01173,0.00349
 Stage1.M10,Machine3.Zone2Temperature,0.0027,0.00057
 Stage1.M10,Machine4.Temperature2,0.00053,0.0005
 Stage1.M10,Machine5.Temperature5,0.00052,0.00048
-Stage1.M10,Machine5.Temperature1,0.00022,0.00013
 Stage1.M10,Machine4.Temperature5,0.00022,7e-05
+Stage1.M10,Machine5.Temperature1,0.00022,0.00013
 Stage1.M12,Machine1.MotorRPM,0.05387,0.0065
 Stage1.M12,Machine5.Temperature4,0.039,0.00265
 Stage1.M12,Combiner.Temperature3,0.01979,0.00364
@@ -100,8 +100,8 @@ Stage2.M0,Machine2.MotorRPM,0.00283,0.00072
 Stage2.M0,Machine1.MotorRPM,0.00249,0.00102
 Stage2.M0,Machine2.Zone1Temperature,0.00105,0.00057
 Stage2.M0,Machine4.Temperature3,0.00091,0.0003
-Stage2.M0,Machine5.Temperature6,0.00082,0.00091
 Stage2.M0,Machine1.ExitZoneTemperature,0.00082,0.00035
+Stage2.M0,Machine5.Temperature6,0.00082,0.00091
 Stage2.M0,Machine5.Temperature2,0.00057,0.00051
 Stage2.M1,Machine5.Temperature4,0.17393,0.01421
 Stage2.M1,Machine5.Temperature6,0.04295,0.01221
@@ -185,8 +185,8 @@ Stage2.M12,Machine1.ExitZoneTemperature,0.00105,0.00062
 Stage2.M12,Machine5.Temperature1,0.00027,0.00012
 Stage2.M13,Machine5.Temperature6,0.00447,0.00076
 Stage2.M13,Machine2.MotorRPM,0.00161,0.00087
-Stage2.M13,Machine4.Temperature3,0.00104,0.00231
 Stage2.M13,Machine4.Temperature2,0.00104,0.0004
+Stage2.M13,Machine4.Temperature3,0.00104,0.00231
 Stage2.M13,Machine3.MotorRPM,0.00043,0.00024
 Stage2.M13,Machine5.Temperature1,0.0004,0.00036
 Stage2.M13,Machine5.Temperature5,0.0003,8e-05

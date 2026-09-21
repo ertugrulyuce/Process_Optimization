@@ -28,7 +28,6 @@ import sys
 import warnings
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -144,13 +143,35 @@ def importances(df, target, dvs, embargo, top=8):
     mdl.fit(Xv.iloc[tr], yv.iloc[tr])
     pi = permutation_importance(mdl, Xv.iloc[te], yv.iloc[te], n_repeats=5,
                                 random_state=RANDOM_STATE, n_jobs=-1)
-    order = np.argsort(pi.importances_mean)[::-1][:top]
-    return [dict(output=target,
-                 feature=Xv.columns[i].replace(".C.Actual", "")
-                          .replace("FirstStage.CombinerOperation", "Combiner"),
-                 imp=round(float(pi.importances_mean[i]), 5),
-                 std=round(float(pi.importances_std[i]), 5))
-            for i in order]
+    rows = [dict(output=target,
+                 feature=short_name(c),
+                 imp=round5(pi.importances_mean[i]),
+                 std=round5(pi.importances_std[i]))
+            for i, c in enumerate(Xv.columns)]
+    return rank_importances(rows, top)
+
+
+def short_name(col):
+    return (col.replace(".C.Actual", "")
+               .replace("FirstStage.CombinerOperation", "Combiner"))
+
+
+def round5(x):
+    # +0.0: -0.0'i 0.0'a cevirir, CSV'de "-0.0" gorunmesin
+    return round(float(x), 5) + 0.0
+
+
+def rank_importances(rows, top):
+    """
+    Onem sirasi: yuvarlanmis degere gore azalan, beraberlikte ada gore.
+
+    Ham degerle siralanamaz: n_jobs=-1 paralel toplama sirasi her calismada
+    son bitleri oynatiyor (~1e-16), ve onemi tam 0 olan birden fazla degisken
+    olabiliyor. np.argsort bu beraberligi kararsiz cozdugu icin ayni kod
+    ayni veriyle top-8'e farkli degisken sokuyordu. Rapordaki hassasiyete
+    yuvarlayip ada gore beraberlik bozmak siralamayi deterministik yapar.
+    """
+    return sorted(rows, key=lambda r: (-r["imp"], r["feature"]))[:top]
 
 
 def leakage_demo(df, target, dvs, embargo):
