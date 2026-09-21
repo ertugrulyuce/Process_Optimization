@@ -16,3 +16,6 @@ for sub in ("data_processing", "analysis", "modeling", "optimization"):
 
 # run_all.py repo kokunde duruyor; testler onu da import ediyor.
 sys.path.insert(0, str(ROOT))
+
+# tools/ altindaki yardimci script'ler de test ediliyor.
+sys.path.insert(0, str(ROOT / "tools"))
