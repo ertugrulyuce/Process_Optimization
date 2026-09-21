@@ -1,10 +1,11 @@
-# CI: lint + testler + import kontrolu.
+# CI: lint + testler + import kontrolu + rapor manifesti.
 #
 # Ham veri repoda yok (bkz. .gitignore), bu yuzden CI pipeline'i CALISTIRMAZ.
-# Calistirilabilecek uc sey var: (1) ruff (kural seti ruff.toml icinde),
+# Calistirilabilecek dort sey var: (1) ruff (kural seti ruff.toml icinde),
 # (2) veriye dokunmayan testler, (3) her modulun import edilebilirligi --
 # src/ duz dizin yapisinda oldugu icin (paket degil) bir dosya tasindiginda
-# import zinciri sessizce kirilabiliyor.
+# import zinciri sessizce kirilabiliyor, (4) commit edilen raporlarin
+# manifestle (reports/MANIFEST.sha256) tutarliligi.
 name: CI
 
 on:
@@ -47,6 +48,14 @@ jobs:
       - name: Testler
         run: pytest
 
+      # Pipeline burada calismaz (ham veri yok); bu adim yalnizca commit
+      # edilen raporlarin manifestle tutarli oldugunu dogrular. Elle
+      # duzenlenmis bir rapor ya da --update unutulmus bir cikti burada
+      # kirmiziya doner. Asil yeniden uretim kontrolu yerelde:
+      # run_all.py ardindan ayni komut.
+      - name: Rapor manifesti
+        run: python tools/report_manifest.py
+
       # Makefile bir kisayol; dogrulanmazsa sessizce bozulur (gelistiricilerin
       # cogu Windows'ta, make'siz calisiyor). `make test` gercekten calistirilip
       # komutlarinin dogru oldugu gorulur -- yukaridaki adimlarla ayni isi
@@ -58,4 +67,5 @@ jobs:
         run: |
           make help
           make test
+          make check-reports
           make -n run clean
