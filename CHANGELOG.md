@@ -21,12 +21,33 @@ raporlar birebir aynı kaldı (`tools/report_manifest.py`).
   sıfırdan tam pipeline çalıştırıldı, raporlar aynı. `requirements.txt` ile
   uyumu test ediliyor, kurulabilirliği CI'da her Python sürümünde
   doğrulanıyor (`14d515d`).
-- `CHANGELOG.md`: bu dosya.
+- `CHANGELOG.md`: bu dosya (`ccbabb6`).
+- `tests/test_stage_link.py`: `stage_link.py` için ilk testler.
 
 ### Değişen
 - `src/data_processing` altındaki beş modüle type hint eklendi. mypy
   (`--strict` dahil) temiz; mypy iki yanlış ipucunu yakaladı, düzeltildi
   (`b64570c`).
+- README sadeleştirildi: hızlı başlangıç bölümü, `make` ve doğrudan
+  komutlar tek tabloda (`473a977`).
+
+### Düzeltilen
+- `make dashboard` hedefi hiç tanımlanmamıştı; README ve `make help` onu
+  gösteriyordu. CI artık hedefin varlığını `make -n` ile doğruluyor
+  (`99eeed3`).
+- Temizlik raporu 103 hücreyi hem R2'de hem R8'de sayıyordu (`e668ede`).
+  **Rapor etkisi:** `02_cleaning_report.md`'de R8 185 → 82 hücre, toplam
+  %18,7 → %18,6. Temizlenmiş veri aynı.
+- Rapor kodunda elle yazılmış 10 sayı eski bir çalıştırmadan kalmıştı; artık
+  ilgili adımın çıktısından hesaplanıyor (`20e5475`). **Rapor etkisi:** 6
+  markdown rapor (örn. `09`'da medyan OOC %38,5 → %41,8, `04`'te medyan
+  n_eff 465 → 442). CSV değişmedi.
+- Gecikme dağılımı tablosu tam tarama sınırında (900 sn) tepe yapan 2 çifti
+  düşürüyordu (`cade939`). **Rapor etkisi:** `05_stage_link_report.md`'de
+  tablo toplamı 146 → 148.
+- README, teknik rapor, varsayımlar ve plan dosyasındaki eski sayılar
+  raporlarla eşitlendi. Çoğu R8 kuralından önceki bir çalıştırmadan
+  kalmıştı (`e85b462`).
 
 ### Kaldırılan
 - `statsmodels` bağımlılığı. İlk sürümden beri `requirements.txt`'te
