@@ -10,6 +10,7 @@ VARSAYIM A1: Kolon adindaki '.C.' = Controlled (setpoint verilebilir),
              Kaggle dokumantasyonundan dogrulanmali. Bkz. docs/assumptions.md
 """
 import re
+from collections.abc import Iterable
 
 TIME = "time_stamp"
 
@@ -68,7 +69,7 @@ def machine_of(col: str) -> str:
     return f"M{m.group(1)}" if m else "-"
 
 
-def build(columns):
+def build(columns: Iterable[str]) -> list[dict[str, str]]:
     """Kolon listesinden sema tablosu (list[dict]) uretir."""
     return [
         dict(column=c, role=classify(c), stage=stage_of(c), machine=machine_of(c))
@@ -76,11 +77,11 @@ def build(columns):
     ]
 
 
-def decision_variables(columns):
+def decision_variables(columns: Iterable[str]) -> list[str]:
     """Optimizasyonun uzerinde oynayabilecegi kolonlar."""
     return [c for c in columns if classify(c) == CONTROLLED]
 
 
-def noise_variables(columns):
+def noise_variables(columns: Iterable[str]) -> list[str]:
     """Kontrol edilemeyen ama output'u etkileyen kolonlar."""
     return [c for c in columns if classify(c) in (AMBIENT, RAW_MAT)]

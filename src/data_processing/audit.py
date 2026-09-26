@@ -8,7 +8,9 @@ sonuclarina bakilarak clean.py icinde tanimlanir.
 Calistirma:  python src/data_processing/audit.py
 """
 import sys
+from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -26,13 +28,13 @@ OUT = ROOT / "reports" / "01_data_quality_report.md"
 MIN_VALID_RATIO = 0.50
 
 
-def load():
+def load() -> pd.DataFrame:
     df = pd.read_csv(RAW)
     df["time_stamp"] = pd.to_datetime(df["time_stamp"])
     return df
 
 
-def sec_time(df):
+def sec_time(df: pd.DataFrame) -> dict[str, Any]:
     t = df["time_stamp"]
     d = t.diff().dt.total_seconds()
     return dict(
@@ -45,7 +47,7 @@ def sec_time(df):
     )
 
 
-def sec_outputs(df):
+def sec_outputs(df: pd.DataFrame) -> pd.DataFrame:
     rows = []
     for st in schema.STAGES:
         for i in range(schema.N_MEASUREMENTS):
@@ -73,18 +75,19 @@ def sec_outputs(df):
     return t
 
 
-def sec_autocorr(df, cols, lags=(1, 30, 60, 300, 600)):
+def sec_autocorr(df: pd.DataFrame, cols: Sequence[str],
+                 lags: Sequence[int] = (1, 30, 60, 300, 600)) -> pd.DataFrame:
     rows = []
     for c in cols:
         x = df[c]
-        r = {"column": c}
+        r: dict[str, Any] = {"column": c}
         for lag in lags:
             r[f"lag{lag}"] = round(x.autocorr(lag), 3)
         rows.append(r)
     return pd.DataFrame(rows)
 
 
-def sec_constants(df):
+def sec_constants(df: pd.DataFrame) -> dict[str, Any]:
     num = df.drop(columns=["time_stamp"])
     nu = num.nunique()
     return dict(
@@ -94,7 +97,7 @@ def sec_constants(df):
     )
 
 
-def md_table(df):
+def md_table(df: pd.DataFrame) -> str:
     """DataFrame -> markdown tablo. tabulate bagimliligindan kacinmak icin elle."""
     cols = list(df.columns)
     head = "| " + " | ".join(str(c) for c in cols) + " |"
@@ -106,7 +109,7 @@ def md_table(df):
     return "\n".join([head, sep] + body)
 
 
-def main():
+def main() -> None:
     df = load()
     sch = pd.DataFrame(schema.build(df.columns))
     time = sec_time(df)
@@ -121,7 +124,7 @@ def main():
            "Stage2.Output.Measurement0.U.Actual"],
     )
 
-    lines = []
+    lines: list[str] = []
     w = lines.append
     w("# Faz 1 - Data Quality Report\n")
     w("Kaynak: `data/raw/continuous_factory_process.csv`  ")

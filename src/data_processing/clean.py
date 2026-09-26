@@ -11,6 +11,7 @@ Calistirma:  python src/data_processing/clean.py
 """
 import sys
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -72,14 +73,14 @@ CLEANING_RULES = {
 }
 
 
-def load_raw():
+def load_raw() -> pd.DataFrame:
     df = pd.read_csv(RAW)
     df["time_stamp"] = pd.to_datetime(df["time_stamp"])
     return df
 
 
-def clean(df):
-    log = {}
+def clean(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, Any]]:
+    log: dict[str, Any] = {}
     df = df.copy()
 
     # --- R3: ozdes kolonlari dusur ---
@@ -125,7 +126,7 @@ def clean(df):
     return df, log
 
 
-def build_kpis(df):
+def build_kpis(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Her output icin deviation KPI'lari.
 
@@ -187,7 +188,7 @@ def build_kpis(df):
     ).round(1)
 
     # --- kapsam: iki ayri gerekce, hangisi oldugu kayitli kalir ---
-    def scope_reason(r):
+    def scope_reason(r: pd.Series) -> str:
         if r.valid_pct < MIN_VALID_RATIO * 100:
             return f"kapsam disi: gecerli veri %{r.valid_pct} < %{MIN_VALID_RATIO*100:.0f} (R6)"
         if not r.sp_meaningful:
@@ -203,7 +204,7 @@ def build_kpis(df):
     # --- bias / variability siniflandirmasi, belirsiz bandi ile ---
     lo, hi = BIAS_BAND
 
-    def err_type(r):
+    def err_type(r: pd.Series) -> str:
         if r.in_scope != "evet":
             return "-"
         if r.bias_share_pct > hi:
@@ -216,8 +217,9 @@ def build_kpis(df):
     return kpi, summary
 
 
-def write_report(df_raw, df, log, summary):
-    lines = []
+def write_report(df_raw: pd.DataFrame, df: pd.DataFrame, log: dict[str, Any],
+                 summary: pd.DataFrame) -> None:
+    lines: list[str] = []
     w = lines.append
     w("# Faz 1 - Cleaning Report\n")
     w("Kaynak: `data/raw/continuous_factory_process.csv`  ")
@@ -329,7 +331,7 @@ def write_report(df_raw, df, log, summary):
     REPORT.write_text("\n".join(lines), encoding="utf-8")
 
 
-def main():
+def main() -> None:
     df_raw = load_raw()
     df, log = clean(df_raw)
     kpi, summary = build_kpis(df)

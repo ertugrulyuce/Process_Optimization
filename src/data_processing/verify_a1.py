@@ -30,6 +30,7 @@ Calistirma:  python src/data_processing/verify_a1.py
 """
 import sys
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -46,7 +47,7 @@ OUT = ROOT / "reports" / "a1_verification.md"
 LOW_INFO_THRESHOLD = 100
 
 
-def profile(s: pd.Series) -> dict:
+def profile(s: pd.Series) -> dict[str, float | int]:
     d = s.diff().dropna()
     n_changes = int((d != 0).sum())
     return dict(
@@ -58,14 +59,15 @@ def profile(s: pd.Series) -> dict:
     )
 
 
-def main():
+def main() -> None:
     df = pd.read_csv(RAW).drop(columns=["time_stamp"])
     rows = []
     for c in df.columns:
         role = schema.classify(c)
         if role in ("time", schema.OUT_SETPNT):
             continue
-        p = profile(df[c])
+        # profile() yalnizca sayilari dondurur; buraya metin alanlari ekleniyor
+        p: dict[str, Any] = profile(df[c])
         p.update(column=c, role=role,
                  suffix=".C." if ".C.Actual" in c else
                         (".U." if ".U.Actual" in c else "-"))
@@ -76,7 +78,7 @@ def main():
     c_grp = t[t.suffix == ".C."]
     u_grp = t[(t.suffix == ".U.") & (t.role != schema.OUT_ACTUAL)]
 
-    lines = []
+    lines: list[str] = []
     w = lines.append
     w("# VARSAYIM A1 - Dogrulama Denemesi\n")
     w("**Hipotez:** `.C.` = Controlled (ayarlanabilir), `.U.` = Uncontrolled (olculur).\n")

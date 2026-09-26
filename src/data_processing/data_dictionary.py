@@ -48,7 +48,7 @@ STAGE_DESC = {
 }
 
 
-def main():
+def main() -> None:
     df = pd.read_csv(RAW)
     df["time_stamp"] = pd.to_datetime(df["time_stamp"])
 
@@ -81,7 +81,7 @@ def main():
 
     t = pd.DataFrame(rows)
 
-    lines = []
+    lines: list[str] = []
     w = lines.append
     w("# Data Dictionary\n")
     w("Otomatik uretildi: `python src/data_processing/data_dictionary.py`  ")
