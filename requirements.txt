@@ -3,4 +3,3 @@ numpy>=2.0
 scipy>=1.14
 scikit-learn>=1.5
 matplotlib>=3.9
-statsmodels>=0.14
