@@ -163,12 +163,14 @@ def main():
 
     cpp_lags = [(c, *splits.acf_decay_lag(df[c], return_censored=True))
                 for c in cpps]
-    write_report(v1, v2, v3, targets, param, embargo, cpp_lags, len(df))
+    corr = pd.read_csv(ROOT / "reports" / "correlation_table.csv")
+    write_report(v1, v2, v3, targets, param, embargo, cpp_lags, len(df),
+                 neff_median=float(corr.n_eff.median()))
     v1.to_csv(ROOT / "reports" / "validation_folds.csv", index=False)
     print(f"\nyazildi: {OUT}")
 
 
-def write_report(v1, v2, v3, targets, param, embargo, cpp_lags, df_len):
+def write_report(v1, v2, v3, targets, param, embargo, cpp_lags, df_len, neff_median):
     L = []
     w = L.append
     w("# Faz 5 - Validation ve Dayaniklilik\n")
@@ -200,7 +202,7 @@ def write_report(v1, v2, v3, targets, param, embargo, cpp_lags, df_len):
     w(f"> acisindan yaklasik **{df_len // embargo if embargo else 0} bagimsiz blok**")
     w("> demek -- 14.088 degil.")
     w(">")
-    w("> Faz 2'de olculen medyan `n_eff` = 465 bu tabloyla birlikte okunmali:")
+    w(f"> Faz 2'de olculen medyan `n_eff` = {neff_median:.0f} bu tabloyla birlikte okunmali:")
     w("> o deger output serilerini de iceriyordu. **Optimizasyonun ogrenmesi")
     w("> gereken sey karar degiskenlerinin etkisi ve orada elde bir avuc")
     w("> bagimsiz gozlem var.** Faz 4'un zayif sonucu buradan geliyor.\n")
@@ -211,11 +213,12 @@ def write_report(v1, v2, v3, targets, param, embargo, cpp_lags, df_len):
         w("*Fold uretilemedi.*\n")
     else:
         # Fold 1'in train seti cok kucuk; onu ayirmadan yapilan karsilastirma
-        # adaletsiz olur (tek split ~9.700 satirla egitiliyor).
+        # adaletsiz olur (tek split cok daha buyuk bir train setiyle egitiliyor).
         f1_n = int(v1[v1.fold == 1].n_train.iloc[0])
         w("**Once bir adalet duzeltmesi.** Walk-forward'da train seti ileriye")
         w("dogru buyuyor; ilk fold yalnizca "
-          f"**{f1_n:,} satirla** egitiliyor, tek split ise ~9.700 satirla.")
+          f"**{f1_n:,} satirla** egitiliyor, tek split ise "
+          f"{targets.n_train.min():,}-{targets.n_train.max():,} satirla.")
         w("Fold 1'i digerleriyle ayni kefeye koymak modeli haksiz yere kotu")
         w("gosterir. Asagida ayri tutuldu.\n")
         w("| fold | train | test |")

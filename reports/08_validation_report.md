@@ -30,7 +30,7 @@ cikti. Faz 3'te 24 `controlled` kolonun medyani 49 satirdi.
 > acisindan yaklasik **7 bagimsiz blok**
 > demek -- 14.088 degil.
 >
-> Faz 2'de olculen medyan `n_eff` = 465 bu tabloyla birlikte okunmali:
+> Faz 2'de olculen medyan `n_eff` = 442 bu tabloyla birlikte okunmali:
 > o deger output serilerini de iceriyordu. **Optimizasyonun ogrenmesi
 > gereken sey karar degiskenlerinin etkisi ve orada elde bir avuc
 > bagimsiz gozlem var.** Faz 4'un zayif sonucu buradan geliyor.
@@ -38,7 +38,7 @@ cikti. Faz 3'te 24 `controlled` kolonun medyani 49 satirdi.
 ## V1 - Model becerisi fold'lar arasinda tutarli mi?
 
 **Once bir adalet duzeltmesi.** Walk-forward'da train seti ileriye
-dogru buyuyor; ilk fold yalnizca **1,292 satirla** egitiliyor, tek split ise ~9.700 satirla.
+dogru buyuyor; ilk fold yalnizca **1,292 satirla** egitiliyor, tek split ise 6,865-9,569 satirla.
 Fold 1'i digerleriyle ayni kefeye koymak modeli haksiz yere kotu
 gosterir. Asagida ayri tutuldu.
 

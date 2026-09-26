@@ -103,9 +103,10 @@ def main() -> None:
     w("1. `.C.Actual` bir setpoint degil, kontrol edilen degiskenin *gerceklesen*")
     w("   olcumudur. Setpoint sabitken bile actual dalgalanir; yuksek hold_ratio")
     w("   beklemek bastan hataliydi.")
+    amb = t[t.column == "AmbientConditions.AmbientTemperature.U.Actual"].iloc[0]
     w("2. `hold_ratio` kontrol edilebilirligi degil, **sensor guncelleme frekansini**")
-    w("   olcuyor. `AmbientTemperature.U.Actual` hold_ratio=0.997 -- kontrol edildigi")
-    w("   icin degil, 370 saniyede bir guncellendigi icin.\n")
+    w(f"   olcuyor. `AmbientTemperature.U.Actual` hold_ratio={amb.hold_ratio:.3f} -- kontrol")
+    w(f"   edildigi icin degil, ~{amb.update_period_s:.0f} saniyede bir guncellendigi icin.\n")
     w("> **Sonuc: A1 ne dogrulandi ne curutuldu.** Dayanagi domain bilgisi olarak")
     w("> kalir: bir ekstruderde bolge sicakliklari ve vida devri ayarlanir")
     w("> (`Zone1Temperature.C`, `MotorRPM.C`); motor amperaji ve malzeme basinci")

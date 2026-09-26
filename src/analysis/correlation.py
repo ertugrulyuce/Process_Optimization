@@ -98,6 +98,17 @@ def eff_n(n, rx, ry):
     return float(min(n, n / factor))
 
 
+def eff_n_ar1(n, rx1, ry1):
+    """
+    AR(1) varsayan basitlestirilmis surum: n * (1 - rx1*ry1) / (1 + rx1*ry1).
+
+    Analizde KULLANILMAZ; rapor, tam formulun neden gerektigini gostermek icin
+    iki surumun medyanini yan yana yaziyor.
+    """
+    p = rx1 * ry1
+    return float(min(n, n * (1 - p) / (1 + p)))
+
+
 def corr_with_eff(x: pd.Series, y: pd.Series, nlags=None):
     """Pearson r + hem ham hem efektif n ile p-degeri."""
     m = x.notna() & y.notna()
@@ -108,7 +119,8 @@ def corr_with_eff(x: pd.Series, y: pd.Series, nlags=None):
     r = float(np.corrcoef(xs, ys)[0, 1])
     # Bartlett icin lag kesimi: n/4 yaygin kural, ust sinir 1000.
     nl = nlags or int(min(1000, n // 4))
-    ne = eff_n(n, acf(xs.to_numpy(float), nl), acf(ys.to_numpy(float), nl))
+    rx, ry = acf(xs.to_numpy(float), nl), acf(ys.to_numpy(float), nl)
+    ne = eff_n(n, rx, ry)
 
     def p_from(nn):
         if np.isnan(nn) or nn <= 3:
@@ -117,7 +129,8 @@ def corr_with_eff(x: pd.Series, y: pd.Series, nlags=None):
         z = np.arctanh(np.clip(r, -0.999999, 0.999999))
         return float(2 * (1 - stats.norm.cdf(abs(z) * np.sqrt(nn - 3))))
 
-    return dict(r=r, n=n, n_eff=ne, p_naive=p_from(n), p_eff=p_from(ne))
+    return dict(r=r, n=n, n_eff=ne, p_naive=p_from(n), p_eff=p_from(ne),
+                n_eff_ar1=eff_n_ar1(n, rx[0], ry[0]))
 
 
 def main():
@@ -146,6 +159,9 @@ def main():
                 cv_pct=round(cv[c], 2), **res))
 
     t = pd.DataFrame(rows)
+    # yalnizca rapordaki karsilastirma icin; tabloya girmez
+    med_neff_ar1 = float(t.pop("n_eff_ar1").median())
+    med_neff = float(t.n_eff.median())
     t["abs_r"] = t.r.abs()
     t["sig_naive"] = t.p_naive < ALPHA
     t["sig_eff"] = (t.p_eff < ALPHA) & (t.n_eff >= MIN_N_EFF)
@@ -183,7 +199,8 @@ def main():
     w("Yalnizca lag-1 kullanan basitlestirilmis surum AR(1) varsayar. Bu veride")
     w("seriler cok daha uzun hafizali (`Machine1.MotorRPM` lag-600'de hala 0.94),")
     w("dolayisiyla lag-1 surumu otokorelasyonu ciddi sekilde eksik duzeltirdi --")
-    w("denendi ve medyan n_eff'i 1744 verdi; tam formul 465 veriyor. Tum lag'ler")
+    w(f"ayni ciftlerde medyan n_eff'i {med_neff_ar1:.0f} verir; tam formul {med_neff:.0f}. "
+      "Tum lag'ler")
     w("toplandi (kesim: n/4). Anlamlilik `n` yerine `n_eff` ile test edilir;")
     w(f"ayrica `n_eff < {MIN_N_EFF}` olan ciftler icin hic hukum verilmez.\n")
 

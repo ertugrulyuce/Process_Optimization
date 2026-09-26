@@ -26,8 +26,8 @@ edilen degisken setpoint'te bekler, hold_ratio yuksek olur.
    olcumudur. Setpoint sabitken bile actual dalgalanir; yuksek hold_ratio
    beklemek bastan hataliydi.
 2. `hold_ratio` kontrol edilebilirligi degil, **sensor guncelleme frekansini**
-   olcuyor. `AmbientTemperature.U.Actual` hold_ratio=0.997 -- kontrol edildigi
-   icin degil, 370 saniyede bir guncellendigi icin.
+   olcuyor. `AmbientTemperature.U.Actual` hold_ratio=0.997 -- kontrol
+   edildigi icin degil, ~352 saniyede bir guncellendigi icin.
 
 > **Sonuc: A1 ne dogrulandi ne curutuldu.** Dayanagi domain bilgisi olarak
 > kalir: bir ekstruderde bolge sicakliklari ve vida devri ayarlanir

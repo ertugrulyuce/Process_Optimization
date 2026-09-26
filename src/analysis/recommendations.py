@@ -100,6 +100,16 @@ def main():
     kpi = pd.read_csv(ROOT / "reports" / "output_kpi_summary.csv")
     res = pd.read_csv(ROOT / "reports" / "modeling_results.csv")
     fold = pd.read_csv(ROOT / "reports" / "validation_folds.csv")
+    cap = pd.read_csv(ROOT / "reports" / "capability_table.csv")
+    link = pd.read_csv(ROOT / "reports" / "stage_link_table.csv")
+    # Ozet sayilar ilgili adimin ciktisindan okunur, buraya elle yazilmaz:
+    # elle yazilanlar pipeline degistiginde kaydi (orn. %38.5 -> %41.8).
+    facts = dict(
+        # ham veride NaN yok (01 raporu), dolayisiyla her NaN temizlik isi
+        invalid_pct=100 * (1 - kpi.n_valid.sum() / (len(kpi) * len(df))),
+        ooc_median=float(cap.ooc_pct.median()),
+        n_reliable_pairs=int(link.reliable.sum()),
+    )
 
     dvs = [c for c in schema.decision_variables(df.columns) if c in df.columns]
     cpps = [c for c in dvs if 100 * df[c].std() / df[c].mean() >= CV_ACTIVE]
@@ -110,7 +120,7 @@ def main():
     targets = list(best[best.skill_vs_pers > 0].output)
 
     eff = observed_effects(df, cpps, targets)
-    write_report(df, kpi, eff, fold, cpps, block_len, targets)
+    write_report(df, kpi, eff, fold, cpps, block_len, targets, facts)
     eff.to_csv(ROOT / "reports" / "effect_sizes.csv", index=False)
     print(f"yazildi: {OUT}")
     print(f"aktif CPP: {len(cpps)} | blok uzunlugu: {block_len} satir")
@@ -119,7 +129,7 @@ def main():
               f"(en buyuk {eff.cohen_d.max():.4f})")
 
 
-def write_report(df, kpi, eff, fold, cpps, block_len, targets):
+def write_report(df, kpi, eff, fold, cpps, block_len, targets, facts):
     L = []
     w = L.append
     ins = kpi[kpi.in_scope == "evet"]
@@ -139,7 +149,7 @@ def write_report(df, kpi, eff, fold, cpps, block_len, targets):
     w("|---|---|---|---|")
     w("| 1 | `Machine4.Temperature4` = `Machine4.Pressure` (ozdes kolon) | "
       "**yuksek** | 14.088 satirin tamaminda birebir; yorum gerektirmiyor |")
-    w("| 2 | Output'larin %19'u sensor dropout (sifir/underflow) | "
+    w(f"| 2 | Output'larin %{facts['invalid_pct']:.0f}'u sensor dropout (sifir/underflow) | "
       "**yuksek** | dogrudan sayim, model yok |")
     w("| 3 | 14 output bias-baskin, 9 variability-baskin | "
       "**yuksek** | dogrudan hesap; bias/variability ayrisimi kararli |")
@@ -148,7 +158,7 @@ def write_report(df, kpi, eff, fold, cpps, block_len, targets):
     w("| 5 | Karar degiskenleri deviation'i aciklamiyor | "
       "**yuksek** | hem dogrusal hem dogrusal olmayan modellerde |")
     w("| 6 | Stage1 -> Stage2 gecikme ~270 sn | "
-      "**orta** | 150 ciftte tepe; dagilim tek tepeli degil |")
+      f"**orta** | {facts['n_reliable_pairs']} ciftte tepe; dagilim tek tepeli degil |")
     w("| 7 | `Machine4.Pressure` 14-17 daha iyi | "
       "**dusuk** | V2: zaman parcalarinin %57'sinde tutuyor |")
     w("| 8 | 5 output'ta model persistence'i geciyor | "
@@ -190,8 +200,9 @@ def write_report(df, kpi, eff, fold, cpps, block_len, targets):
     w("proses sahibine sorulmali.\n")
 
     w("### A2 — Sensor dropout'u giderilsin\n")
-    w("**Bulgu:** Output olcum hucrelerinin **%18.6**'si gecersiz: 78.539 tam")
-    w("sifir + 185 float-underflow degeri (`1e-100` mertebesinde) + 126 negatif.")
+    w(f"**Bulgu:** Output olcum hucrelerinin **%{facts['invalid_pct']:.1f}**'si gecersiz:")
+    w("tam sifirlar, float-underflow degerleri ve negatifler (kural bazinda dokum:")
+    w("`02_cleaning_report.md`).")
     w("`Stage1.M5` gecerli verisinin yalnizca %4.6'sina sahip.\n")
     w("**Muhendislik yorumu:** Sifirlar tek bir durus blogunda degil, yuzlerce")
     w("kisa kesinti halinde (`Stage1.M14` -> 673 ayri kesinti). Bu bir uretim")
@@ -307,7 +318,7 @@ def write_report(df, kpi, eff, fold, cpps, block_len, targets):
     w("## 4. Izleme onerileri\n")
     w("**Control chart secimi:** Klasik I-MR grafigi bu proses icin **uygun")
     w("degil** (K10) -- otokorelasyon nedeniyle medyan out-of-control orani")
-    w("%38.5 cikiyor, kararli bir proseste ~%0.3 beklenir. Yanlis alarm")
+    w(f"%{facts['ooc_median']:.1f} cikiyor, kararli bir proseste ~%0.3 beklenir. Yanlis alarm")
     w("operatoru grafige guvenmemeye iter.\n")
     w("Yerine: **EWMA veya CUSUM**, ya da once bir zaman serisi modeli kurup")
     w("**artiklar uzerinde** kontrol grafigi.\n")

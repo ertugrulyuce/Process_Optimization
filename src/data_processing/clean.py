@@ -260,7 +260,8 @@ def write_report(df_raw: pd.DataFrame, df: pd.DataFrame, log: dict[str, Any],
     w("Sifirlar tek bir durus blogunda toplanmis olsa satir bazli filtreleme")
     w("dogru olurdu. Ama audit gosterdi ki sifirlar yuzlerce kisa kesinti halinde")
     w("dagilmis (Stage1.M14 -> 673 ayri kesinti) ve her output'ta FARKLI")
-    w("satirlarda. Satir silmek, bir output'un dropout'u yuzunden diger 25")
+    n_other = int((summary.in_scope == "evet").sum()) - 1
+    w(f"satirlarda. Satir silmek, bir output'un dropout'u yuzunden diger {n_other}")
     w("output'un gecerli olcumunu de atmak demekti. Bunun yerine hucre bazli")
     w("NaN kullanildi; her output kendi gecerli verisiyle analiz edilir.\n")
 

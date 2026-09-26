@@ -37,7 +37,7 @@ Output olcum hucrelerinin **%18.6**'i NaN'a cevrildi (78,747 / 422,640). Hicbir 
 Sifirlar tek bir durus blogunda toplanmis olsa satir bazli filtreleme
 dogru olurdu. Ama audit gosterdi ki sifirlar yuzlerce kisa kesinti halinde
 dagilmis (Stage1.M14 -> 673 ayri kesinti) ve her output'ta FARKLI
-satirlarda. Satir silmek, bir output'un dropout'u yuzunden diger 25
+satirlarda. Satir silmek, bir output'un dropout'u yuzunden diger 24
 output'un gecerli olcumunu de atmak demekti. Bunun yerine hucre bazli
 NaN kullanildi; her output kendi gecerli verisiyle analiz edilir.
 

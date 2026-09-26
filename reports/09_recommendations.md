@@ -19,7 +19,7 @@ veri kalitesi ve olcum sistemiyle ilgili olanlar.**
 | 3 | 14 output bias-baskin, 9 variability-baskin | **yuksek** | dogrudan hesap; bias/variability ayrisimi kararli |
 | 4 | Rastgele split R2 0.97 -> dogru split -6.89 | **yuksek** | tekrarlanabilir, yontemsel |
 | 5 | Karar degiskenleri deviation'i aciklamiyor | **yuksek** | hem dogrusal hem dogrusal olmayan modellerde |
-| 6 | Stage1 -> Stage2 gecikme ~270 sn | **orta** | 150 ciftte tepe; dagilim tek tepeli degil |
+| 6 | Stage1 -> Stage2 gecikme ~270 sn | **orta** | 148 ciftte tepe; dagilim tek tepeli degil |
 | 7 | `Machine4.Pressure` 14-17 daha iyi | **dusuk** | V2: zaman parcalarinin %57'sinde tutuyor |
 | 8 | 5 output'ta model persistence'i geciyor | **cok dusuk** | V1: walk-forward'da hicbiri tum fold'larda pozitif degil |
 
@@ -61,8 +61,9 @@ proses sahibine sorulmali.
 
 ### A2 — Sensor dropout'u giderilsin
 
-**Bulgu:** Output olcum hucrelerinin **%18.6**'si gecersiz: 78.539 tam
-sifir + 185 float-underflow degeri (`1e-100` mertebesinde) + 126 negatif.
+**Bulgu:** Output olcum hucrelerinin **%18.6**'si gecersiz:
+tam sifirlar, float-underflow degerleri ve negatifler (kural bazinda dokum:
+`02_cleaning_report.md`).
 `Stage1.M5` gecerli verisinin yalnizca %4.6'sina sahip.
 
 **Muhendislik yorumu:** Sifirlar tek bir durus blogunda degil, yuzlerce
@@ -183,7 +184,7 @@ net deney suresi.
 
 **Control chart secimi:** Klasik I-MR grafigi bu proses icin **uygun
 degil** (K10) -- otokorelasyon nedeniyle medyan out-of-control orani
-%38.5 cikiyor, kararli bir proseste ~%0.3 beklenir. Yanlis alarm
+%41.8 cikiyor, kararli bir proseste ~%0.3 beklenir. Yanlis alarm
 operatoru grafige guvenmemeye iter.
 
 Yerine: **EWMA veya CUSUM**, ya da once bir zaman serisi modeli kurup

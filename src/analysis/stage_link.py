@@ -112,7 +112,7 @@ def main():
     w("Kaynak: `data/processed/clean_v1.csv`  ")
     w("Uretildi: `python src/analysis/stage_link.py`\n")
     w(f"{len(s1)} Stage1 x {len(s2)} Stage2 output = **{len(t)} cift**, "
-      f"{len(LAGS)} farkli gecikmede tarandi (0-300 sn).\n")
+      f"{len(LAGS)} farkli gecikmede tarandi (0-{max(LAGS)} sn).\n")
 
     w("## Neden bu analiz gerekli (A5)\n")
     w("Veri setinde transport delay belirtilmemis. Ayni satirdaki Stage 1 ve")
@@ -148,7 +148,7 @@ def main():
             w("> Tutarli, sifirdan farkli bir transport delay **bulunamadi.**")
             w("> Iki olasilik var ve veri bunlari ayirt edemiyor:")
             w(">")
-            w("> 1. Gercek gecikme, taranan 0-300 sn araligina gore cok kisa")
+            w(f"> 1. Gercek gecikme, taranan 0-{max(LAGS)} sn araligina gore cok kisa")
             w(">    (birkac saniye) ve 1 Hz ornekleme ile ayirt edilemiyor.")
             w("> 2. Stage1 ve Stage2 deviation'lari ortak bir dis etkenden")
             w(">    (ayni hat kosullari, ayni zaman trendi) etkileniyor ve bu,")

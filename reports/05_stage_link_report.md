@@ -3,7 +3,7 @@
 Kaynak: `data/processed/clean_v1.csv`  
 Uretildi: `python src/analysis/stage_link.py`
 
-12 Stage1 x 13 Stage2 output = **156 cift**, 91 farkli gecikmede tarandi (0-300 sn).
+12 Stage1 x 13 Stage2 output = **156 cift**, 91 farkli gecikmede tarandi (0-900 sn).
 
 ## Neden bu analiz gerekli (A5)
 

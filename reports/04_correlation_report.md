@@ -17,7 +17,7 @@ n_eff = n / (1 + 2 * sum_k (1 - k/n) * rho_x(k) * rho_y(k))
 Yalnizca lag-1 kullanan basitlestirilmis surum AR(1) varsayar. Bu veride
 seriler cok daha uzun hafizali (`Machine1.MotorRPM` lag-600'de hala 0.94),
 dolayisiyla lag-1 surumu otokorelasyonu ciddi sekilde eksik duzeltirdi --
-denendi ve medyan n_eff'i 1744 verdi; tam formul 465 veriyor. Tum lag'ler
+ayni ciftlerde medyan n_eff'i 1546 verir; tam formul 442. Tum lag'ler
 toplandi (kesim: n/4). Anlamlilik `n` yerine `n_eff` ile test edilir;
 ayrica `n_eff < 30` olan ciftler icin hic hukum verilmez.
 
