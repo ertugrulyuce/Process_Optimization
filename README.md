@@ -130,7 +130,7 @@ belirleme biçimi:
   tahmini hiçbir şey öğrenmeden R² = 0,85 alıyor; bu eşiği geçemeyen model
   prosese dair bilgi taşımıyor.
 - **İki düzeltme birlikte uygulandı.** Otokorelasyon (Bartlett'in tam formülü)
-  ve çoklu karşılaştırma (Benjamini-Hochberg FDR). 600 çiftte ham testte 434
+  ve çoklu karşılaştırma (Benjamini-Hochberg FDR). 600 çiftte ham testte 437
   "anlamlı" ilişki, düzeltme sonrası 81.
 - **Tüm sonuçlar walk-forward ile sınandı** — ve bazıları ayakta kalmadı.
   "5 çıktıda persistence geçildi" sonucu tek bölmeye dayanıyordu; 5 pencerede
@@ -151,7 +151,7 @@ Proje boyunca ölçülen ve kapsamı belirleyen 24 kısıt. En kritik olanlar:
 | K7 | Gerçek karar uzayı 24 değil 5 değişken |
 | K8 | `Machine4.Temperature4` ile `Machine4.Pressure` birebir özdeş — veri hatası |
 | K9 | `.C.`/`.U.` ekinin anlamı doğrulanamadı — riski ölçüldü, kapatılmadı |
-| K10 | I-MR control chart bu veri için geçersiz — OOC oranı %38,5 |
+| K10 | I-MR control chart bu veri için geçersiz — medyan OOC oranı %41,8 |
 | K14 | Rastgele split R² 0,97 → doğru split −6,89 |
 | K21 | CPP otokorelasyonu 2000 gecikmede sönmüyor → ~7 bağımsız blok |
 | K22 | Tek split sonuçları walk-forward'da ayakta kalmıyor |

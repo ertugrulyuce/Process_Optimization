@@ -104,14 +104,14 @@ Bazı output'lar hedeften sistematik sapıyor: `Stage1.M6` −53%, `Stage2.M1` �
 `Stage1.M1` −39%. Bias ve variability ayrı ele alınır; karıştırılırsa
 optimizasyon yanlış şeyi kovalar.
 
-### K7 — Gerçek optimizasyon uzayı 25 değil, ~6 değişken
+### K7 — Gerçek optimizasyon uzayı 24 değil, 5 değişken
 Karar değişkenlerinin 4 saatlik pencerede *ne kadar oynatıldığı* ölçüldü. 25
 kolonun **13'ünün varyasyon katsayısı %0.5'in altında** — proses onları
 neredeyse hiç değiştirmemiş. Machine5'in sıcaklıkları pratikte sabit
-(CV %0.01–0.04): bir değişken hiç değişmediyse etkisi öğrenilemez, dolayısıyla
+(CV %0.01–0.66, hepsi %1'in altında): bir değişken hiç değişmediyse etkisi öğrenilemez, dolayısıyla
 onun için "optimum" da bulunamaz.
 
-**Anlamlı varyasyon gösteren 6 değişken — projenin gerçek karar uzayı:**
+**Anlamlı varyasyon gösteren 5 değişken — projenin gerçek karar uzayı:**
 
 | Değişken | Aralık | CV |
 |---|---|---|
@@ -160,7 +160,7 @@ holdout'u kullanır).
 - [x] Değişken şeması ve rol sınıflandırması → `src/data_processing/schema.py`
 - [x] Varsayım log'u → `docs/assumptions.md`
 - [x] A1 doğrulama denemesi → `reports/a1_verification.md`
-- [x] **`clean.py`** — R1–R6 kuralları, `data/processed/clean_v1.csv`
+- [x] **`clean.py`** — R1–R8 kuralları, `data/processed/clean_v1.csv`
 - [x] Deviation KPI'ları (signed / absolute / relative) — bias ve variability ayrı
 - [x] Cleaning report → `reports/02_cleaning_report.md`
 - [x] Data dictionary → `reports/data_dictionary.md`
@@ -175,18 +175,18 @@ holdout'u kullanır).
 | Tip | Adet | Ne demek | Çözümü |
 |---|---|---|---|
 | **Bias-baskın** (>%60) | 14 | Proses kararlı ama yanlış noktada | Setpoint / kalibrasyon ayarı |
-| **Variability-baskın** (<%40) | 10 | Hedef doğru ama dağılım geniş | Proses kontrolü — **optimizasyonun hedefi** |
-| **Belirsiz** (%40–60) | 1 | Bileşenler eşit — `Stage2.M7` | Faz 2'de control chart ile karara bağlanır |
+| **Variability-baskın** (<%40) | 9 | Hedef doğru ama dağılım geniş | Proses kontrolü — **optimizasyonun hedefi** |
+| **Belirsiz** (%40–60) | 2 | Bileşenler eşit — `Stage2.M7`, `Stage2.M8` | Faz 2'de control chart ile karara bağlanır |
 
 En uç bias örnekleri: `Stage1.M1` (−39%, hatanın %98'i bias), `Stage2.M1`
 (−44%, %98), `Stage2.M14` (−31%, %97).
 
-En yüksek variability: `Stage1.M4` (dev_std 1.112), `Stage1.M13` (0.834),
-`Stage2.M2` (0.804).
+En yüksek variability: `Stage1.M4` (dev_std 1.112), `Stage1.M13` (0.833),
+`Stage2.M2` (0.793).
 
 **Bunun anlamı:** Bias-baskın bir output'u proses parametresi oynatarak
 düzeltmeye çalışmak yanlıştır — çözümü setpoint'i düzeltmektir. Faz 4
-optimizasyonu **10 variability-baskın output'a** odaklanacak.
+optimizasyonu **9 variability-baskın output'a** odaklanacak.
 
 ---
 
@@ -207,7 +207,7 @@ optimizasyonu **10 variability-baskın output'a** odaklanacak.
 ### Faz 2 sonuçları
 
 **K10 — Control chart bu veri için geçersiz araç.** Medyan out-of-control oranı
-**%38.5**; kararlı bir proseste ~%0.3 olmalı. Sebep proses değil yöntem: I-MR
+**%41.8**; kararlı bir proseste ~%0.3 olmalı. Sebep proses değil yöntem: I-MR
 bağımsız gözlem varsayar, bu veride lag-1 otokorelasyon 0.93–0.99. `MR_bar`
 küçük çıkıyor → kontrol limitleri gerçekte olması gerekenden dar. **Kararlılık
 hükmü askıya alındı**; doğru araç, Faz 3'te model kurulduktan sonra artıklar
@@ -218,11 +218,11 @@ test edildi:
 
 | ölçüt | anlamlı | oran |
 |---|---|---|
-| Ham `n = 14.088` ile | 434 | %72 |
-| Otokorelasyon düzeltmesi (`n_eff`) ile | 159 | %27 |
+| Ham `n = 14.088` ile | 437 | %72.8 |
+| Otokorelasyon düzeltmesi (`n_eff`) ile | 148 | %24.7 |
 | + Çoklu karşılaştırma (FDR) ile | **81** | **%14** |
 
-Medyan `n_eff` = **465**, 14.088 değil. Düzeltme yapılmasaydı **353 sahte
+Medyan `n_eff` = **442**, 14.088 değil. Düzeltme yapılmasaydı **356 sahte
 ilişki** raporlanacaktı.
 
 **K12 — Basit ve güçlü bir sürükleyici yok.** Variability-baskın output'lar için
@@ -233,7 +233,7 @@ aktif karar değişkenleriyle `|r| > 0.3` olan FDR-sonrası anlamlı ilişki say
 doğrusalsızlık) Faz 3'te test edilecek. Ama **beklenti şimdiden kalibre
 edilmeli.**
 
-**K13 — Transport delay ~270 sn.** Çiftlerin yalnızca %5'i lag = 0'da tepe
+**K13 — Transport delay ~270 sn.** Çiftlerin yalnızca %7'si lag = 0'da tepe
 yapıyor. İlk tarama 0–300 sn'de yapıldı ve tepeler üst sınıra yapışıktı; aralık
 900 sn'ye açıldığında tepe yerinde kaldı — yani sınır artifaktı değil. Dağılım
 tek tepeli değil (250–300'de 40 çift, 500–550'de 15), bu da tek bir malzeme
@@ -312,7 +312,7 @@ CPP adayları bu yüzden yalnızca aktif değişkenler arasından seçildi:
 | `Machine4.Temperature3` | 1.15 | 9 | ✅ evet |
 | `Machine1.ExitZoneTemperature` | 2.71 | 7 | — |
 | `Machine3.MotorRPM` | 3.28 | 4 | — |
-| `Machine1.MotorRPM` | 5.74 | 2 | — |
+| `Machine1.MotorRPM` | 5.74 | 3 | — |
 | `Machine4.Pressure` | 5.46 | 2 | ✅ evet |
 
 İki bağımsız yöntem (Faz 2 korelasyon, Faz 3 permutation importance)
@@ -328,7 +328,7 @@ yakınsama güven artırıyor.
 bağlı olduğunu ölçmek.
 
 - [ ] Objective function (bias ve variability ayrı terimler — K6)
-- [ ] Karar değişkenleri: yalnızca `controlled` (25 kolon)
+- [ ] Karar değişkenleri: yalnızca `controlled` (24 kolon)
 - [ ] Constraint set: gözlenen çalışma aralıkları (K1 — dışına ekstrapolasyon yok)
 - [ ] Optimum operating point / range
 - [ ] **A1 duyarlılık analizi** (K9): karar değişkeni seti daraltılıp
@@ -450,7 +450,7 @@ uygulanmamalıdır.
 [Proses Optimizasyon Panosu](https://claude.ai/code/artifact/8a183a29-74ce-4d2d-abbf-157c08a5d22d)
 
 Bölümler: özet şerit → çıktı performansı (filtre + sıralama + dağılım grafiği)
-→ karar değişkenleri → düzeltme hunisi (434 → 159 → 81) → DOE hesabı →
+→ karar değişkenleri → düzeltme hunisi (437 → 148 → 81) → DOE hesabı →
 bulguların güven derecesi.
 
 Plan v0 "Power BI veya Tableau" diyordu; bunun yerine tek dosyalık, veri gömülü

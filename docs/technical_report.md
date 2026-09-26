@@ -62,14 +62,14 @@ Raw Material ───────┼── Machine 2 ──┼──→ Combine
 
 | Rol | Adet | Optimizasyondaki yeri |
 |---|---|---|
-| `controlled` | 24 | Karar değişkenleri |
+| `controlled` | 25 | Karar değişkenleri (R3 özdeş kolonu düşürünce 24) |
 | `measured` | 16 | Proses tepkisi — teşhis değişkeni, girdi değil |
 | `ambient` + `raw_material` | 14 | Gürültü, kontrol edilemez |
 | `output_actual` | 30 | Optimize edilen çıktı |
 | `output_setpoint` | 30 | Sabit hedef, model girdisi değil |
 
 Bu ayrım `.C.` / `.U.` kolon eki hipotezine dayanıyor (varsayım A1). Hipotez
-dokümantasyondan doğrulanamadı; riski Faz 4'te ölçüldü (bkz. §5, K19).
+dokümantasyondan doğrulanamadı; riski Faz 4'te ölçüldü (bkz. §8, K19).
 
 ### Kapsam dışı bırakılanlar
 
@@ -135,7 +135,7 @@ Aynı model, aynı veri (`Stage1.M4.dev`), yalnızca bölme yöntemi değişiyor
 | Bölme yöntemi | R² |
 |---|---|
 | Rastgele split | **0,97** |
-| Bloklu split, embargo yok | −6,28 |
+| Bloklu split, embargo yok | −6,36 |
 | Bloklu split + embargo (49) | **−6,89** |
 | *baseline:* persistence | 0,85 |
 
@@ -169,8 +169,8 @@ Korelasyon analizinde iki düzeltme birlikte uygulandı:
 1. **Otokorelasyon** — Bartlett'in tam formülü:
    `n_eff = n / (1 + 2·Σₖ (1−k/n)·ρₓ(k)·ρᵧ(k))`
    Yalnızca lag-1 kullanan basit sürüm AR(1) varsayar ve bu veride
-   otokorelasyonu ciddi biçimde eksik düzeltiyordu (medyan `n_eff` 1.744 yerine
-   465).
+   otokorelasyonu ciddi biçimde eksik düzeltiyordu (medyan `n_eff` 1.546 yerine
+   442).
 2. **Çoklu karşılaştırma** — Benjamini-Hochberg FDR. 600 çift test edildiği için
    şans eseri ~30 tanesi "anlamlı" çıkardı.
 
@@ -205,14 +205,14 @@ modellerde de hiçbir çıktıda R² pozitif değil.
 
 | Ölçüt | Anlamlı | Oran |
 |---|---|---|
-| Ham `n = 14.088` | 434 | %72 |
-| + Otokorelasyon (`n_eff`) | 159 | %27 |
+| Ham `n = 14.088` | 437 | %72,8 |
+| + Otokorelasyon (`n_eff`) | 148 | %24,7 |
 | + Çoklu karşılaştırma (FDR) | **81** | **%14** |
 
 ### Orta güven
 
-**B6 — Stage 1 → Stage 2 transport delay ~270 sn.** 150 güvenilir çiftin
-yalnızca %5'i lag = 0'da tepe yapıyor. İlk tarama 0–300 sn'ydi ve tepeler üst
+**B6 — Stage 1 → Stage 2 transport delay ~270 sn.** 148 güvenilir çiftin
+yalnızca %7'si lag = 0'da tepe yapıyor. İlk tarama 0–300 sn'ydi ve tepeler üst
 sınıra yapışıktı; aralık 900 sn'ye açıldığında tepe yerinde kaldı — sınır
 artifaktı değil. Ancak dağılım tek tepeli değil (250–300'de 40 çift, 500–550'de
 15), bu da birden fazla malzeme yolu olabileceğini düşündürüyor.
@@ -240,7 +240,7 @@ aramanın durduğu yer. Pratik sonuç: veri bu parametreler açısından ~7 bağ
 blok.
 
 **Karar uzayı dar.** 24 karar değişkeninin 13'ünün varyasyon katsayısı %0,5'in
-altında. Machine 5'in sıcaklıkları pratikte sabit (CV %0,01). Gerçek karar uzayı
+altında. Machine 5'in sıcaklıkları dar aralıkta (CV %0,01–0,66, hepsi %1 eşiğinin altında). Gerçek karar uzayı
 5 parametre.
 
 **Proses merkezi gürültüden hızlı kayıyor.** 5 çıktının 3'ünde pencereler arası
@@ -257,7 +257,7 @@ setpoint önerisi kısa ömürlüdür.
 
 | Çıktı | Hedef | Sapma | Bias payı |
 |---|---|---|---|
-| `Stage1.M1` | 22,74 | −8,87 (%−39,0) | %98,1 |
+| `Stage1.M1` | 22,74 | −8,87 (%−39,0) | %98,3 |
 | `Stage2.M1` | 11,71 | −5,13 (%−43,8) | %97,7 |
 | `Stage2.M14` | 11,71 | −3,67 (%−31,4) | %96,9 |
 
@@ -288,7 +288,7 @@ merkezleme eşiği istatistiksel olarak tanımlanmalı.
 ### A5 — Kontrol grafiği seçimi değişsin
 
 Klasik I-MR grafiği bu proses için uygun değil: otokorelasyon nedeniyle medyan
-out-of-control oranı **%38,5** çıkıyor (kararlı bir proseste ~%0,3 beklenir).
+out-of-control oranı **%41,8** çıkıyor (kararlı bir proseste ~%0,3 beklenir).
 Yanlış alarm operatörü grafiğe güvenmemeye iter. Yerine EWMA/CUSUM, ya da bir
 zaman serisi modeli kurup artıklar üzerinde kontrol grafiği.
 

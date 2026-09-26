@@ -62,24 +62,27 @@ flowchart TD
         link["stage_link<br>transport delay"]
     end
 
-    subgraph F3["Faz 3 · modeling / optimization"]
+    subgraph F3["Faz 3 · modeling"]
         train["train<br>tahmin modelleri + CPP"]
-        opt["optimize<br>dar kapsamlı optimizasyon"]
     end
 
     RES[/"modeling_results.csv"/]
 
-    subgraph F4["Faz 4 · analysis"]
-        val["validation<br>walk-forward + drift"]
-        rec["recommendations<br>öneri + DOE"]
-        fig["figures<br>görseller"]
+    subgraph F4["Faz 4 · optimization"]
+        opt["optimize<br>dar kapsamlı optimizasyon"]
     end
 
+    subgraph F5["Faz 5 · analysis"]
+        val["validation<br>walk-forward + drift"]
+        rec["recommendations<br>öneri + DOE"]
+    end
+
+    fig["figures<br>görseller (fazlar arası)"]
     FOLD[/"validation_folds.csv"/]
 
     RAW --> audit & verify & clean & ddict
     clean --> OUT1
-    OUT1 --> F2 & F3 & F4
+    OUT1 --> F2 & F3 & F4 & F5 & fig
     train --> RES
     RES --> opt & val & rec & fig
     val --> FOLD --> rec
@@ -87,11 +90,12 @@ flowchart TD
     link -- "stage_link_table.csv" --> fig
 ```
 
-Kritik düğümler `clean` ve `train`. `clean`'in iki çıktısını 5–12 arası her
-adım okur (şemada faz kutusuna tek ok; hangi adımın hangisini okuduğu aşağıdaki
-tabloda). `modeling_results.csv` dört adımın girdisi. `run_all.py --only`
-seçilen adımları her zaman pipeline sırasına dizer; bunun nedeni bu
-bağımlılıklar.
+Faz numaraları raporların başlıklarıyla aynı. Kritik düğümler `clean` ve
+`train`. `clean_v1.csv`'yi 5–12 arası her adım okur; `output_kpi_summary.csv`'yi
+`optimize` ve `validation` dışındakiler (şemada faz kutusuna tek ok; adım adım
+liste aşağıdaki tabloda). `modeling_results.csv` dört adımın girdisi.
+`run_all.py --only` seçilen adımları her zaman pipeline sırasına dizer; bunun
+nedeni bu bağımlılıklar.
 
 ### Adım adım girdi ve çıktılar
 

@@ -90,8 +90,8 @@ zaman alır, ama bu transport delay veri setinde belirtilmemiş. Aynı satırdak
 Stage 1 ve Stage 2 ölçümleri aynı malzemeye ait olmayabilir.
 
 **Durum: KISMEN ÇÖZÜLDÜ** (`reports/05_stage_link_report.md`). Gecikme sabit
-varsayılmadı, arandı: 150 güvenilir output çiftinde çapraz korelasyon tepesi
-**~270 sn**'de. Çiftlerin yalnızca %5'i lag = 0'da tepe yapıyor.
+varsayılmadı, arandı: 148 güvenilir output çiftinde çapraz korelasyon tepesi
+**~270 sn**'de. Çiftlerin yalnızca %7'si lag = 0'da tepe yapıyor.
 
 **Sınır artifaktı kontrolü:** İlk tarama 0–300 sn aralığında yapıldı ve tepeler
 265 sn'de, yani üst sınıra yapışık çıktı. Aralık 900 sn'ye genişletildiğinde tepe
@@ -159,8 +159,8 @@ gerekirdi. Oransal KPI yine de geçersiz olurdu.
 **Kabul:** `bias_share_pct > %60` → bias-baskın, `< %40` → variability-baskın,
 arası **belirsiz** olarak işaretlenir ve kategoriye zorlanmaz.
 
-**Dayanak:** Tek bir %50 eşiğiyle `Stage2.M7` **%50.3** ile kıl payı bias tarafına
-düşüyordu. Bias'ı 0.2366, `dev_std`'si 0.2352 — bileşenler pratikte eşit. Bunu
+**Dayanak:** Tek bir %50 eşiğiyle `Stage2.M7` **%51.0** ile kıl payı bias tarafına
+düşüyordu. Bias'ı 0.2370, `dev_std`'si 0.2325 — bileşenler pratikte eşit. Bunu
 "bias-baskın" diye raporlamak, veride olmayan bir kesinlik iddia etmek olurdu.
 
 **Sonucu:** Belirsiz bandındaki output'lar (`Stage2.M7`, `Stage2.M8`) Faz 3'te model
@@ -192,7 +192,7 @@ A2'nin `== 0` testi bunları kaçırıyordu; `Stage1.M1`'in minimumu `4.4e-151` 
 
 I-MR grafiği ardışık gözlemlerin bağımsız olduğunu varsayar. Bu veride lag-1
 otokorelasyon 0.93–0.99. Sonuç: `MR_bar` küçük çıkıyor → `sigma_st` düşük tahmin
-ediliyor → kontrol limitleri gereğinden dar → medyan out-of-control oranı **%38.5**
+ediliyor → kontrol limitleri gereğinden dar → medyan out-of-control oranı **%41.8**
 (kararlı bir proseste ~%0.3 beklenir).
 
 **Sonucu:** Kararlılık hükmü askıya alındı. Doğru araç, Faz 3'te model kurulduktan
