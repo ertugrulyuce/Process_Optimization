@@ -40,30 +40,26 @@ sürer (bkz. teknik rapor §7 A6).
 
 ---
 
-## Kurulum
+## Hızlı başlangıç
 
-Python 3.11 veya uzeri gerekir (numpy 2.x ve pandas 2.2 bagimliligi).
-
-```bash
-pip install -r requirements.txt
-```
-
-Raporları birebir yeniden üretmek için (`make run` + `make check-reports`)
-commit edilmiş raporları üreten tam sürümler `requirements.lock` içinde:
+Python 3.11 veya üzeri gerekir.
 
 ```bash
-pip install -r requirements.lock
+git clone https://github.com/ertugrulyuce/Process_Optimization.git
+cd Process_Optimization
+pip install -r requirements.lock   # raporları üreten tam sürümler
+make test                          # ham veri gerekmez
 ```
 
-Geliştirme için ek olarak:
+Raporlar repoda olduğu için okumak ve panoyu açmak için bu kadarı yeterli.
+Pipeline'ı gerçek veriyle yeniden çalıştırmak için ham CSV'yi
+[Kaggle'dan](https://www.kaggle.com/datasets/supergus/multistage-continuousflow-manufacturing-process)
+indirip `data/raw/continuous_factory_process.csv` olarak kaydedin:
 
 ```bash
-pip install -r requirements-dev.txt
-pre-commit install   # commit öncesi ruff — isteğe bağlı, aynı kurallar CI'da da çalışır
+make run             # 12 adım, ~6 dakika
+make check-reports   # "tamam: 24 rapor manifestle ayni" → raporlar birebir yeniden üretildi
 ```
-
-Ham CSV'yi Kaggle'dan indirip `data/raw/continuous_factory_process.csv` olarak
-kaydedin.
 
 > ⚠️ **Ham CSV'yi Excel'de açmayın.** Türkçe/Avrupa locale ayarlarında Excel
 > ondalıklı sayıları tarihe çevirir (`11.54` → `Kas.54`) ve bu **geri alınamaz**
@@ -71,47 +67,41 @@ kaydedin.
 > 556.563 hücre (%34,4) bozulmuştu. Bozuk kopya `data/_quarantine/` altında
 > gerekçesiyle duruyor.
 
-## Çalıştırma
+`requirements.lock` tam sürümleri sabitler; `requirements.txt` yalnızca alt
+sınır verir ve daha yeni sürümleri kurar. Bu da çalışır; yalnızca
+`make check-reports` bir fark gösterirse sebebi kod değil sürüm farkı olabilir.
 
-```bash
-make lint    # ruff — kural seti ve gerekçeleri ruff.toml içinde
-make test    # import kontrolü + pytest (ham veri gerekmez)
-make run     # tüm pipeline — 12 adım, ~6 dakika
-make clean   # yalnızca üretilen çıktıları sil
-```
+## Komutlar
 
-`make` kurulu değilse aynı komutlar doğrudan çalıştırılabilir:
+`make` kurulu değilse (Windows'ta genelde yoktur) sağdaki komut aynı işi yapar.
 
-```bash
-python run_all.py                # temizle + 12 adım
-python run_all.py --keep         # temizlemeden çalıştır
-python run_all.py --only clean   # tek adım — temizlik yapılmaz
-python run_all.py --list         # adımları listele
-```
+| make | doğrudan | ne yapar |
+|---|---|---|
+| `make test` | `python tools/check_imports.py` + `python -m pytest` | import zinciri + testler; ham veri gerekmez |
+| `make lint` | `python -m ruff check .` | kural seti ve gerekçeleri `ruff.toml` içinde |
+| `make run` | `python run_all.py` | üretilen çıktıları sil + 12 adımı çalıştır |
+| | `python run_all.py --only clean` | tek adım, temizlik yapılmaz (`--list` adımları gösterir) |
+| `make check-reports` | `python tools/report_manifest.py` | raporlar `reports/MANIFEST.sha256` ile aynı mı |
+| `make clean` | `python run_all.py --clean` | yalnızca üretilen çıktıları sil; `docs/` korunur |
+| `make dashboard` | `python -m streamlit run dashboard/app.py` | KPI panosu; önce `pip install -r dashboard/requirements.txt` |
 
-Adımlar sırayla: veri denetimi → A1 varsayım testi → temizlik + KPI → değişken
-sözlüğü → capability → korelasyon → transport delay → modelleme → optimizasyon
-→ validation → öneriler → görseller.
+Tüm raporlar script çıktısıdır, elle düzenlenmez. Kod değişikliği bir raporu
+değiştiriyorsa bu bilinçli olmalı: `python tools/report_manifest.py --update`
+ve rapor aynı commit'e girer, yoksa CI kırmızıya döner. Pano hiçbir sayıyı
+yeniden hesaplamaz, commit edilmiş CSV'leri okur; ham veri olmadan da çalışır.
 
-Tüm raporlar script çıktısıdır, elle düzenlenmez. `reports/` silinebilir ve
-yeniden üretilir; elle yazılan dokümanlar `docs/` altındadır.
+Adımların hangi dosyayı okuyup yazdığı ve doğrulama katmanları:
+[`docs/architecture.md`](docs/architecture.md).
 
-### Pano (isteğe bağlı)
-
-```bash
-pip install -r dashboard/requirements.txt
-make dashboard   # streamlit run dashboard/app.py
-```
-
-Pano hiçbir sayıyı yeniden hesaplamaz: `reports/` altındaki commit edilmiş
-CSV'leri okur, yani **ham veri olmadan da çalışır.** Otoriter kaynak markdown
-raporlardır; pano onların özetidir.
+**Geliştirme:** `pip install -r requirements-dev.txt` ve isteğe bağlı olarak
+`pre-commit install` (commit öncesi ruff + defter çıktısı temizliği; aynı
+kontroller CI'da da çalışır). Değişiklikler: [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Yapı
 
 ```text
 data/raw/          Kaggle orijinali (repoya girmez)
-data/processed/    clean_v1.csv — temizlenmiş veri + KPI'lar
+data/processed/    clean_v1.csv — temizlenmiş veri + KPI'lar (repoya girmez)
 data/_quarantine/  Excel'in bozduğu kopya + gerekçe
 src/
   data_processing/ schema, audit, verify_a1, clean, data_dictionary
@@ -119,15 +109,13 @@ src/
                    recommendations, figures
   modeling/        splits, train
   optimization/    optimize
-reports/           9 üretilen rapor + figürler (script çıktısı)
-docs/              architecture (akış şeması), technical_report, assumptions,
-                   plan_v0_original
+reports/           9 üretilen rapor + tablolar + figürler, MANIFEST.sha256
+docs/              architecture, technical_report, assumptions, plan_v0_original
 notebooks/         01_kesif — keşif defteri (hücre çıktıları commit edilmez)
 dashboard/         Streamlit KPI panosu — reports/ CSV'lerini okur
-tests/             pytest — veriye dokunmayan birim testleri
-tools/             check_imports — CI'nin import zincirini doğrulaması
-run_all.py         pipeline sürücüsü — `--only` ile tek adım
-Makefile           make test / run / clean kısayolları
+tests/             pytest — ham veriye dokunmayan testler
+tools/             check_imports, report_manifest — CI kontrolleri
+run_all.py         pipeline sürücüsü
 ```
 
 ## Metodolojik duruş
