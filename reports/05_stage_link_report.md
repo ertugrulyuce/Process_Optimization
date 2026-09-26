@@ -29,7 +29,7 @@ Guvenilir cift (n_eff >= 30): **148 / 156**
 | 500-600 | 21 ############# |
 | 600-700 | 4 ## |
 | 700-800 | 13 ######## |
-| 800-900 | 11 ###### |
+| 800-900 | 13 ######## |
 
 > **BULGU L1 - Transport delay ~270 sn.** Ciftlerin yalnizca
 > %7'i lag = 0'da tepe yapiyor; en sik tepe noktasi

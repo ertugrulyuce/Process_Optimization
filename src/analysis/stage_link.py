@@ -64,6 +64,20 @@ def eff_at(x: pd.Series, y: pd.Series, lag: int):
     return eff_n(len(a), acf(a.to_numpy(float), nl), acf(b.to_numpy(float), nl))
 
 
+def lag_histogram(lags: pd.Series, max_lag: int, width: int = 100) -> pd.Series:
+    """
+    En iyi gecikmelerin `width` sn'lik araliklara dagilimi, etiket -> adet.
+
+    Araliklar [a, b); son aralik taramanin ust sinirini (max_lag) de icerir.
+    Eskiden [800, 900) ile bitiyordu ve tam sinirda tepe yapan ciftler
+    tablodan dusuyordu: toplam, guvenilir cift sayisini tutmuyordu.
+    """
+    bins = list(range(0, max_lag, width)) + [max_lag + 1]
+    counts = pd.cut(lags, bins=bins, right=False).value_counts().sort_index()
+    counts.index = [f"{int(iv.left)}-{min(int(iv.right), max_lag)}" for iv in counts.index]
+    return counts
+
+
 def main():
     df = pd.read_csv(PROC)
     summary = pd.read_csv(KPI_SUM)
@@ -125,13 +139,12 @@ def main():
     w("![transport delay](figures/04_transport_delay.png)\n")
     w(f"Guvenilir cift (n_eff >= {MIN_N_EFF}): **{len(rel)} / {len(t)}**\n")
     if len(rel):
-        bins = list(range(0, max(LAGS) + 100, 100))
-        binned = pd.cut(rel.best_lag, bins=bins, right=False).value_counts().sort_index()
+        binned = lag_histogram(rel.best_lag, max(LAGS))
         w("| gecikme araligi (sn) | tepe yapan cift |")
         w("|---|---|")
-        for iv, cnt in binned.items():
+        for label, cnt in binned.items():
             bar = "#" * int(30 * cnt / binned.max()) if binned.max() else ""
-            w(f"| {int(iv.left)}-{int(iv.right)} | {cnt} {bar} |")
+            w(f"| {label} | {cnt} {bar} |")
         w("")
         mode_lag = int(lag_counts.idxmax())
         med_lag = float(rel.best_lag.median())
