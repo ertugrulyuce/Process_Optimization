@@ -69,11 +69,14 @@ jobs:
       # komutlarinin dogru oldugu gorulur -- yukaridaki adimlarla ayni isi
       # tekrar yapar, birkac saniye. Testlerin sessizce atlanmasi riski yok:
       # pytest zaten yukarida dogrudan calisti.
-      # run/clean yalnizca -n ile cozulur: ikisi de ham veriyi ya da uretilen
-      # ciktilari gerektiriyor, CI'da ikisi de yok.
+      # run/clean/dashboard yalnizca -n ile cozulur: run ham veriyi, clean
+      # uretilen ciktilari, dashboard streamlit'i ve bir tarayiciyi gerektiriyor.
+      # -n yine de hedefin var oldugunu dogrular: `make dashboard` README'de ve
+      # `make help`te yaziyordu ama kurali hic eklenmemisti, burada denenmedigi
+      # icin fark edilmedi.
       - name: Makefile hedefleri
         run: |
           make help
           make test
           make check-reports
-          make -n run clean
+          make -n run clean dashboard

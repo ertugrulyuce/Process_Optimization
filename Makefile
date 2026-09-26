@@ -36,3 +36,8 @@ check-reports:
 # kuralin iki yerde tekrarlanmasi demek olurdu.
 clean:
 	$(PYTHON) run_all.py --clean
+
+# streamlit ayri kurulur (dashboard/requirements.txt); pipeline ve CI onu
+# kurmuyor. `-m` ile, PYTHON'un ortamindaki streamlit kullanilsin diye.
+dashboard:
+	$(PYTHON) -m streamlit run dashboard/app.py
