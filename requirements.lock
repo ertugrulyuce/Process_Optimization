@@ -1,0 +1,36 @@
+# Commit edilmis raporlari ureten tam surumler (calisma bagimliliklari).
+#
+#   pip install -r requirements.lock
+#
+# requirements.txt yeni kurulum icin alt sinirlari tanimlar; bu dosya
+# `run_all.py` + `tools/report_manifest.py` ile raporlari birebir yeniden
+# uretecek ortami sabitler. Gelistirme araclari (pytest, ruff) burada yok,
+# requirements-dev.txt icinde.
+#
+# Python 3.11-3.13. scipy bilincli olarak 1.17.1: 1.18 Python 3.11'i birakti.
+# Raporlar 1.18.1 ile uretilmisti; bu lock'la temiz bir ortamda tam pipeline
+# yeniden calistirildi, 24 rapor manifestle ayni (2026-09-27).
+#
+# Yenilemek icin: temiz bir venv'de `pip install -r requirements.txt`,
+# `pip freeze`, sonra run_all.py + report_manifest.py ile raporlarin
+# degismedigini dogrulayin. requirements.txt ile uyum
+# tests/test_requirements_lock.py icinde test ediliyor.
+contourpy==1.3.3
+cycler==0.12.1
+fonttools==4.64.0
+joblib==1.5.3
+kiwisolver==1.5.1
+matplotlib==3.11.1
+narwhals==2.25.0
+numpy==2.2.4
+packaging==26.3
+pandas==2.2.3
+pillow==12.3.0
+pyparsing==3.3.2
+python-dateutil==2.9.0.post0
+pytz==2025.1
+scikit-learn==1.9.0
+scipy==1.17.1
+six==1.17.0
+threadpoolctl==3.6.0
+tzdata==2025.2

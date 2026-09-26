@@ -48,6 +48,13 @@ Python 3.11 veya uzeri gerekir (numpy 2.x ve pandas 2.2 bagimliligi).
 pip install -r requirements.txt
 ```
 
+Raporları birebir yeniden üretmek için (`make run` + `make check-reports`)
+commit edilmiş raporları üreten tam sürümler `requirements.lock` içinde:
+
+```bash
+pip install -r requirements.lock
+```
+
 Geliştirme için ek olarak:
 
 ```bash

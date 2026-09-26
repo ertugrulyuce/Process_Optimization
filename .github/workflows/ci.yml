@@ -5,7 +5,8 @@
 # (2) veriye dokunmayan testler, (3) her modulun import edilebilirligi --
 # src/ duz dizin yapisinda oldugu icin (paket degil) bir dosya tasindiginda
 # import zinciri sessizce kirilabiliyor, (4) commit edilen raporlarin
-# manifestle (reports/MANIFEST.sha256) tutarliligi.
+# manifestle (reports/MANIFEST.sha256) tutarliligi. Ayrica requirements.lock'un
+# her Python surumunde kurulabilir oldugu kurulum yapilmadan dogrulanir.
 name: CI
 
 on:
@@ -38,6 +39,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
+
+      # Lock'taki tam surumler bu Python surumu icin gercekten var mi? Kurmadan
+      # cozer. requirements.txt ile uyumu tests/test_requirements_lock.py
+      # dogruluyor; bu adim ise "kurulabilir mi" sorusunu cevapliyor (scipy
+      # 1.18 ornegin Python 3.11'i biraktigi icin lock 1.17.1'de).
+      - name: Lock kurulabilir mi
+        run: pip install --dry-run --ignore-installed -r requirements.lock
 
       - name: Lint
         run: ruff check .
