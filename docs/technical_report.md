@@ -109,7 +109,7 @@ Sekiz numaralı kural uygulandı; her biri bir denetim bulgusuna dayanıyor:
 | R5 | Duruş bloğu işaretlendi | 56 satır |
 | R6 | Geçerli veri < %50 olan çıktılar kapsam dışı | 4 çıktı |
 | R7 | Setpoint < sapma std'si olanlar kapsam dışı | 1 çıktı |
-| R8 | Setpoint'in %1'inden küçük değerler → NaN | 185 hücre |
+| R8 | Setpoint'in %1'inden küçük değerler → NaN | 82 hücre |
 
 Çıktı ölçüm hücrelerinin **%18,6'sı** geçersizdi. **Hiçbir satır silinmedi** —
 sıfırlar her çıktıda farklı satırlarda olduğu için satır silmek, bir sensörün
@@ -117,7 +117,8 @@ dropout'u yüzünden diğer 24 çıktının geçerli ölçümünü de atmak olur
 
 **R8 nasıl bulundu:** Bir control chart'ta y ekseninin beklenmedik davranışını
 kovalarken `Stage1.M1`'in minimumunun `4.4e-151` olduğu görüldü. R1'in `== 0`
-testi bu float-underflow değerlerini kaçırıyordu; 26 çıktının tamamında vardı.
+testi bu float-underflow değerlerini kaçırıyordu; 26 çıktıda 185 hücre vardı.
+Bunların 103'ü negatif olduğu için R2'de sayılıyor, tabloda R8'e 82 kalıyor.
 
 ---
 

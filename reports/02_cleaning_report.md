@@ -23,14 +23,14 @@ Uretildi: `python src/data_processing/clean.py`
 - **R3** dusurulen kolon: ['Machine4.Temperature4.C.Actual']
 - **R1** NaN'a cevrilen sifir: **78,539** hucre
 - **R2** NaN'a cevrilen negatif: **126** hucre
-- **R8** NaN'a cevrilen imkansiz-kucuk deger: **185** hucre
+- **R8** NaN'a cevrilen imkansiz-kucuk deger: **82** hucre
 - **R4** duplicate timestamp'li satir: 27 (silinmedi, isaretlendi)
   <br>*Not:* audit raporu 14 diyor cunku `duplicated()` her tekrarin ilk
   gorunumunu saymaz. Burada `keep=False` ile cakismanin **her iki tarafi**
   isaretleniyor; ayni olayin iki farkli sayimi.
 - **R5** durus blogu satiri: 56 (silinmedi, isaretlendi)
 
-Output olcum hucrelerinin **%18.7**'i NaN'a cevrildi (78,850 / 422,640). Hicbir satir silinmedi.
+Output olcum hucrelerinin **%18.6**'i NaN'a cevrildi (78,747 / 422,640). Hicbir satir silinmedi.
 
 ### Neden hicbir satir silinmedi?
 

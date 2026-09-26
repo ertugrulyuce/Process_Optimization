@@ -68,6 +68,19 @@ def test_zero_negative_and_tiny_actuals_become_nan():
     assert log["R8_tiny_to_nan"] == 1
 
 
+def test_each_cell_counted_under_first_rule_only():
+    """Negatif underflow (-1e-300) hem R2'ye hem R8'e uyar; yalnizca R2'de sayilir.
+
+    Gercek veride 103 hucre boyleydi ve rapordaki toplam, NaN'a cevrilen hucre
+    sayisini 103 fazla gosteriyordu.
+    """
+    df, log = clean.clean(_mini([10.2, -1e-300, 1e-300, 0.0]))
+
+    assert (log["R2_negatives_to_nan"], log["R8_tiny_to_nan"]) == (1, 1)
+    touched = log["R1_zeros_to_nan"] + log["R2_negatives_to_nan"] + log["R8_tiny_to_nan"]
+    assert touched == int(df[ACT].isna().sum()) == 3
+
+
 def test_tiny_threshold_is_relative_to_setpoint():
     """R8 esigi mutlak degil, setpoint'in TINY_FRAC kati; esigin kendisi korunur."""
     sp = 10.0

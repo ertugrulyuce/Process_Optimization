@@ -112,8 +112,11 @@ def clean(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, Any]]:
         n = v < 0
         # R8: tam sifir olmayan ama fiziksel olarak imkansiz derecede kucuk
         # degerler (float underflow artifakti: 1e-100, 1e-306 gibi). Sadece
-        # `== 0` testi bunlari kaciriyordu.
-        tiny = (~z) & (v.abs() > 0) & (v.abs() < sp * TINY_FRAC)
+        # `== 0` testi bunlari kaciriyordu. Negatifler haric: onlari R2 zaten
+        # yakaladi. Her hucre onu yakalayan ilk kuralda sayilir; yoksa -1e-150
+        # gibi bir deger hem R2'de hem R8'de sayilip rapordaki toplami
+        # gercek NaN sayisindan buyuk gosteriyordu.
+        tiny = (~z) & (~n) & (v.abs() < sp * TINY_FRAC)
         n_zero += int(z.sum())
         n_neg += int(n.sum())
         n_tiny += int(tiny.sum())

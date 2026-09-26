@@ -174,7 +174,8 @@ düşüyordu. Bias'ı 0.2366, `dev_std`'si 0.2352 — bileşenler pratikte eşit
 fiziksel sayılmaz; NaN'a çevrilir.
 
 **Dayanak:** Veride `1e-100` ile `1e-306` mertebesinde, tam sıfır olmayan değerler
-var — float underflow artifaktı. 26 output'un tamamında, toplam **185 hücre**.
+var — float underflow artifaktı. 26 output'ta toplam 185 hücre; bunların 103'ü
+negatif olduğu için R2'de sayılıyor, R8'e kalan **82 hücre** (24 output).
 A2'nin `== 0` testi bunları kaçırıyordu; `Stage1.M1`'in minimumu `4.4e-151` çıkıyordu.
 
 **Eşik neden %1:** Gerçek ölçümler setpoint'in %50–150'si civarında, artifaktlar ise
