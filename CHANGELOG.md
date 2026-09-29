@@ -19,7 +19,16 @@ raporlar birebir aynı kaldı (`tools/report_manifest.py`).
   var. Eşik değişmedi; gerekçe, sonucun eşiğe bağlı olmadığını gösteren
   hesaplanmış bir duyarlılık taramasıyla değiştirildi (`clean.py`, A10).
   **Rapor etkisi:** `02_cleaning_report.md`'ye tarama tablosu eklendi.
-  Mevcut sayıların hiçbiri değişmedi, temizlenmiş veri aynı.
+  Mevcut sayıların hiçbiri değişmedi, temizlenmiş veri aynı (`bb575c0`).
+- Değişken sözlüğü her kolonun değişim sayısını 1 fazla gösteriyordu (ilk
+  satırın NaN farkı değişim sayılıyordu) (`4cc6be1`). **Rapor etkisi:**
+  `data_dictionary.csv/.md`'de yalnızca `n_changes`, her satırda 1 eksik.
+- Rapor kodunda elle yazılmış ~85 sayı hesaplanan değere bağlandı
+  (`4b8898b`). Bu sırada üç yanlış sayı çıktı: "lag-1 otokorelasyon
+  0.93–0.99" hiçbir değişken kümesinde tutmuyor (output'larda medyan 0.89,
+  karar değişkenlerinde 0.99); R7 bloğunda `Stage2.M6` için 0.197 ve %5295,
+  doğrusu 0.196 ve %5296. **Rapor etkisi:** `02`'de R7 bloğu, `03` ve
+  `04`'te lag-1 cümlesi; diğer raporlar birebir aynı.
 
 ## 2026-09-27
 
