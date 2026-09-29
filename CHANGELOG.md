@@ -11,6 +11,16 @@ raporlar birebir aynı kaldı (`tools/report_manifest.py`).
 
 ---
 
+## 2026-09-29
+
+### Düzeltilen
+- R8'in %1 eşiği için yazılan gerekçe ("artifaktlarla gerçek ölçümler arasında
+  geniş boşluk") veride tutmuyordu: eşiğin iki yanında aynı türden değerler
+  var. Eşik değişmedi; gerekçe, sonucun eşiğe bağlı olmadığını gösteren
+  hesaplanmış bir duyarlılık taramasıyla değiştirildi (`clean.py`, A10).
+  **Rapor etkisi:** `02_cleaning_report.md`'ye tarama tablosu eklendi.
+  Mevcut sayıların hiçbiri değişmedi, temizlenmiş veri aynı.
+
 ## 2026-09-27
 
 ### Eklenen

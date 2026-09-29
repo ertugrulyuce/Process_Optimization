@@ -42,10 +42,14 @@ MIN_SETPOINT_TO_STD = 1.0
 BIAS_BAND = (40.0, 60.0)
 
 # R8: bir olcum, setpoint'inin bu kesrinden kucukse fiziksel sayilmaz.
-# Veride tam sifir olmayan ama 1e-100..1e-306 mertebesinde degerler var --
-# float underflow artifakti. Gercek olcumler setpoint'in %50-150'si
-# civarinda oldugu icin %1 esigi genis bir bosluga dusuyor, keyfi degil.
+# Veride tam sifir olmayan kucuk degerler var (1e-306'dan 0.04'e kadar);
+# cogu sifir bloklarinin icinde, yani dropout kalintisi. Gercek olcumlerle
+# aralarinda temiz bir bosluk YOK: bazi output'larda setpoint'in %1-30'u
+# arasinda sureklilik var. Bu yuzden %1 veriden turetilmis bir kesim degil;
+# savunmasi, sonucun ona bagli olmamasi -- rapordaki duyarlilik taramasi
+# (TINY_FRAC_SWEEP) hangi aralikta kapsam ve siniflarin degismedigini gosterir.
 TINY_FRAC = 0.01
+TINY_FRAC_SWEEP = (1e-4, 1e-3, TINY_FRAC, 0.05, 0.1)
 
 # K8: birebir ozdes kolon ciftlerinden dusurulecek olan.
 # Machine4.Temperature4 (14-25) diger Machine4 sicakliklariyla (260-396)
@@ -79,7 +83,8 @@ def load_raw() -> pd.DataFrame:
     return df
 
 
-def clean(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, Any]]:
+def clean(df: pd.DataFrame,
+          tiny_frac: float = TINY_FRAC) -> tuple[pd.DataFrame, dict[str, Any]]:
     log: dict[str, Any] = {}
     df = df.copy()
 
@@ -111,12 +116,12 @@ def clean(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, Any]]:
         z = v == 0
         n = v < 0
         # R8: tam sifir olmayan ama fiziksel olarak imkansiz derecede kucuk
-        # degerler (float underflow artifakti: 1e-100, 1e-306 gibi). Sadece
-        # `== 0` testi bunlari kaciriyordu. Negatifler haric: onlari R2 zaten
+        # degerler (4.4e-151 gibi). Sadece `== 0` testi bunlari
+        # kaciriyordu. Negatifler haric: onlari R2 zaten
         # yakaladi. Her hucre onu yakalayan ilk kuralda sayilir; yoksa -1e-150
         # gibi bir deger hem R2'de hem R8'de sayilip rapordaki toplami
         # gercek NaN sayisindan buyuk gosteriyordu.
-        tiny = (~z) & (~n) & (v.abs() < sp * TINY_FRAC)
+        tiny = (~z) & (~n) & (v.abs() < sp * tiny_frac)
         n_zero += int(z.sum())
         n_neg += int(n.sum())
         n_tiny += int(tiny.sum())
@@ -220,8 +225,42 @@ def build_kpis(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     return kpi, summary
 
 
+def tiny_frac_sweep(df_raw: pd.DataFrame,
+                    fracs: tuple[float, ...] = TINY_FRAC_SWEEP) -> pd.DataFrame:
+    """R8 esigi degisseydi kapsam / siniflandirma ne olurdu?
+
+    Her esik icin temizlik + KPI bastan hesaplanir ve TINY_FRAC sonucuyla
+    karsilastirilir. `changed`, kapsami veya error_type'i degisen output'lar.
+    """
+    def outcome(frac: float) -> tuple[int, pd.DataFrame]:
+        df, log = clean(df_raw, tiny_frac=frac)
+        _, s = build_kpis(df)
+        return log["R8_tiny_to_nan"], s.set_index("output")[["in_scope", "error_type"]]
+
+    _, base = outcome(TINY_FRAC)
+    rows = []
+    for frac in sorted(fracs):
+        n_tiny, s = outcome(frac)
+        diff = (s != base).any(axis=1)
+        changed = [f"{o}: {base.error_type[o]} -> {s.error_type[o]}"
+                   for o in s.index[diff]]
+        rows.append(dict(frac=frac, r8_cells=n_tiny, changed=changed))
+    return pd.DataFrame(rows)
+
+
+def stable_range(sweep: pd.DataFrame) -> tuple[float, float]:
+    """TINY_FRAC'i iceren, hicbir sonucun degismedigi kesintisiz esik araligi."""
+    same = sweep.changed.str.len().eq(0).tolist()
+    lo = hi = sweep.frac.tolist().index(TINY_FRAC)
+    while lo > 0 and same[lo - 1]:
+        lo -= 1
+    while hi < len(same) - 1 and same[hi + 1]:
+        hi += 1
+    return float(sweep.frac.iloc[lo]), float(sweep.frac.iloc[hi])
+
+
 def write_report(df_raw: pd.DataFrame, df: pd.DataFrame, log: dict[str, Any],
-                 summary: pd.DataFrame) -> None:
+                 summary: pd.DataFrame, sweep: pd.DataFrame) -> None:
     lines: list[str] = []
     w = lines.append
     w("# Faz 1 - Cleaning Report\n")
@@ -255,6 +294,25 @@ def write_report(df_raw: pd.DataFrame, df: pd.DataFrame, log: dict[str, Any],
                + log["R8_tiny_to_nan"])
     w(f"\nOutput olcum hucrelerinin **%{100 * touched / total_cells:.1f}**'i NaN'a cevrildi "
       f"({touched:,} / {total_cells:,}). Hicbir satir silinmedi.\n")
+
+    lo_f, hi_f = stable_range(sweep)
+    w("### R8 esigi sonucu belirliyor mu?\n")
+    w("R8'in yakaladigi degerlerle gercek olcumler arasinda temiz bir bosluk yok:")
+    w("bazi output'larda setpoint'in %1-30'u arasinda kesintisiz olcum var. Yani")
+    w(f"%{TINY_FRAC * 100:g} esigi veriden turetilmedi. Asagidaki tarama, esik baska")
+    w("bir yere konsaydi kapsamin ve bias/variability siniflarinin ne olacagini")
+    w("gosteriyor:\n")
+    w("| esik (setpoint'in kati) | R8 hucre | kapsami / sinifi degisen output |")
+    w("|---|---|---|")
+    for _, r in sweep.iterrows():
+        mark = " (secilen)" if r.frac == TINY_FRAC else ""
+        w(f"| {r.frac:g}{mark} | {r.r8_cells:,} | {'; '.join(r.changed) or '-'} |")
+    w("")
+    w(f"Esik **{lo_f:g} ile {hi_f:g}** arasinda nereye konursa konsun hicbir")
+    w("output'un kapsami ya da sinifi degismiyor; secim bu aralikta sonucu")
+    w("belirlemiyor. Daha yuksek esiklerde degisen output'lar R8'in hedefledigi")
+    w("artifaktlardan degil, o output'un setpoint'in cok altinda olctugu")
+    w("donemlerden etkileniyor (A10).\n")
 
     w("### Neden hicbir satir silinmedi?\n")
     w("Sifirlar tek bir durus blogunda toplanmis olsa satir bazli filtreleme")
@@ -344,7 +402,7 @@ def main() -> None:
     out = pd.concat([df, kpi], axis=1)
     out.to_csv(PROC / "clean_v1.csv", index=False)
     summary.to_csv(ROOT / "reports" / "output_kpi_summary.csv", index=False)
-    write_report(df_raw, df, log, summary)
+    write_report(df_raw, df, log, summary, tiny_frac_sweep(df_raw))
 
     ins = summary[summary.in_scope == "evet"]
     print(f"yazildi: data/processed/clean_v1.csv  ({out.shape[0]:,} x {out.shape[1]})")  # noqa: E501

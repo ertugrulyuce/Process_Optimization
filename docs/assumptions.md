@@ -173,15 +173,30 @@ düşüyordu. Bias'ı 0.2370, `dev_std`'si 0.2325 — bileşenler pratikte eşit
 **Kabul:** Bir ölçüm, setpoint'inin %1'inden küçükse (ama tam sıfır değilse)
 fiziksel sayılmaz; NaN'a çevrilir.
 
-**Dayanak:** Veride `1e-100` ile `1e-306` mertebesinde, tam sıfır olmayan değerler
-var — float underflow artifaktı. 26 output'ta toplam 185 hücre; bunların 103'ü
-negatif olduğu için R2'de sayılıyor, R8'e kalan **82 hücre** (24 output).
+**Dayanak:** Veride tam sıfır olmayan ama setpoint'in %1'inden küçük değerler var;
+büyüklükleri `1e-306`'dan `0.04`'e kadar uzanıyor. 26 output'ta toplam 185 hücre;
+bunların 103'ü negatif olduğu için R2'de sayılıyor, R8'e kalan **82 hücre**
+(24 output). 185 hücrenin 178'i bir sıfıra en fazla 3 satır uzaklıkta, yani
+dropout bloklarının içinde ya da kenarında: ölçüm değil, dropout kalıntısı.
 A2'nin `== 0` testi bunları kaçırıyordu; `Stage1.M1`'in minimumu `4.4e-151` çıkıyordu.
 
-**Eşik neden %1:** Gerçek ölçümler setpoint'in %50–150'si civarında, artifaktlar ise
-`1e-3`'ten küçük. %1 eşiği geniş bir boşluğa düşüyor.
+**Eşik neden %1:** Veriden türetilmiş bir kesim değil. İlk gerekçe "artifaktlar
+`1e-3`'ten küçük, gerçek ölçümler %50–150'de, %1 geniş bir boşluğa düşüyor" idi;
+veride tutmadı. Eşiğin hemen altında (%0,37–0,63) ve hemen üstünde (%1,08) aynı
+türden değerler var ve `Stage2.M12` ile `Stage1.M13`'te setpoint'in %1–30'u
+arasında ~1.500 ölçüm kesintisiz uzanıyor.
+
+Eşiğin savunması, sonucu belirlememesi. `02_cleaning_report.md`'deki duyarlılık
+taraması eşiği `1e-4`'ten %10'a kadar kaydırıyor: `1e-4` ile %5 arasında hiçbir
+output'un kapsamı ya da sınıfı değişmiyor. İlk değişiklik %10'da.
 
 **Etkisi:** `Stage2.M8` variability-baskından "belirsiz" bandına taşındı.
+
+**Açık soru — `Stage2.M12`'nin ilk 1.000 satırı:** Taramada %10'da sınıfı değişen
+tek output M12 (variability → bias). Nedeni R8'in hedeflediği artifaktlar değil:
+M12'nin setpoint'in %30'unun altındaki 372 ölçümünün 371'i ilk 1.000 satırda ve
+M12'nin yüksek `dev_std`'sini bu dönem taşıyor. Bu dönemin bir devreye alma geçişi
+mi yoksa gerçek proses mi olduğu ayrı bir karar; R8 eşiğiyle çözülmemeli.
 
 ---
 

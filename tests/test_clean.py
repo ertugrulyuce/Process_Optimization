@@ -240,6 +240,40 @@ def test_rmse_splits_into_bias_and_spread():
     assert r.rmse ** 2 == pytest.approx(r.bias ** 2 + pop_var, rel=1e-3)
 
 
+# --- R8 esik taramasi ---------------------------------------------------------
+
+def _low_regime():
+    """
+    Stage1.M0 setpoint'in %3'unde olctugu bir donem iceriyor: %1 esiginde bu
+    donem kalir ve output variability-baskin, %5 esiginde silinir ve bias-baskin.
+    """
+    raw = _full()
+    act = 10.5 + 0.1 * _pattern()
+    act[:20] = 0.3
+    raw["Stage1.Output.Measurement0.U.Actual"] = act
+    raw["time_stamp"] = pd.date_range("2026-01-01", periods=N, freq="s")
+    return raw
+
+
+def test_sweep_reports_class_changes_against_chosen_threshold():
+    sweep = clean.tiny_frac_sweep(_low_regime(), fracs=(1e-3, clean.TINY_FRAC, 0.05))
+
+    assert sweep.frac.tolist() == [1e-3, clean.TINY_FRAC, 0.05]
+    assert sweep.r8_cells.tolist() == [0, 0, 20]
+    assert sweep.changed.tolist() == [[], [], ["Stage1.M0: variability -> bias"]]
+
+
+def test_stable_range_stops_at_first_change():
+    sweep = clean.tiny_frac_sweep(_low_regime(), fracs=(1e-4, 1e-3, clean.TINY_FRAC, 0.05, 0.1))
+
+    assert clean.stable_range(sweep) == (1e-4, clean.TINY_FRAC)
+
+
+def test_sweep_includes_chosen_threshold():
+    """stable_range, secilen esigin taramada olmasina dayaniyor."""
+    assert clean.TINY_FRAC in clean.TINY_FRAC_SWEEP
+
+
 # --- esik tutarliligi ---------------------------------------------------------
 
 def test_audit_and_clean_share_valid_ratio():

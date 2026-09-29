@@ -32,6 +32,28 @@ Uretildi: `python src/data_processing/clean.py`
 
 Output olcum hucrelerinin **%18.6**'i NaN'a cevrildi (78,747 / 422,640). Hicbir satir silinmedi.
 
+### R8 esigi sonucu belirliyor mu?
+
+R8'in yakaladigi degerlerle gercek olcumler arasinda temiz bir bosluk yok:
+bazi output'larda setpoint'in %1-30'u arasinda kesintisiz olcum var. Yani
+%1 esigi veriden turetilmedi. Asagidaki tarama, esik baska
+bir yere konsaydi kapsamin ve bias/variability siniflarinin ne olacagini
+gosteriyor:
+
+| esik (setpoint'in kati) | R8 hucre | kapsami / sinifi degisen output |
+|---|---|---|
+| 0.0001 | 67 | - |
+| 0.001 | 67 | - |
+| 0.01 (secilen) | 82 | - |
+| 0.05 | 636 | - |
+| 0.1 | 1,187 | Stage2.M12: variability -> bias |
+
+Esik **0.0001 ile 0.05** arasinda nereye konursa konsun hicbir
+output'un kapsami ya da sinifi degismiyor; secim bu aralikta sonucu
+belirlemiyor. Daha yuksek esiklerde degisen output'lar R8'in hedefledigi
+artifaktlardan degil, o output'un setpoint'in cok altinda olctugu
+donemlerden etkileniyor (A10).
+
 ### Neden hicbir satir silinmedi?
 
 Sifirlar tek bir durus blogunda toplanmis olsa satir bazli filtreleme
