@@ -72,7 +72,8 @@ def main() -> None:
                 mean=round(float(valid.mean()), 3) if len(valid) else np.nan,
                 std=round(float(valid.std()), 4) if len(valid) else np.nan,
                 zero_pct=round(100 * float((s == 0).mean()), 1),
-                n_changes=int((s.diff() != 0).sum()),
+                # ilk satirin diff'i NaN; dropna olmadan NaN != 0 degisim sayilir
+                n_changes=int((s.diff().dropna() != 0).sum()),
             )
         rec["note"] = ""
         if c in DROP_DUPLICATE_COLS:
