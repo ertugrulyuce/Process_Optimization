@@ -140,8 +140,8 @@ Hammadde varyasyonunun etkisi bu veriyle araştırılamaz.
 setpoint gerçek bir hedef değildir; oransal KPI'ları tanımsız sayılır ve output
 kapsam dışı bırakılır.
 
-**Dayanak:** `Stage2.M6`'nın setpoint'i 0.01, `dev_std`'si 0.197 — hedef, ölçüm
-gürültüsünün yirmide biri. Buna bölünce bias %5295 çıkıyordu ve output yanlışlıkla
+**Dayanak:** `Stage2.M6`'nın setpoint'i 0.01, `dev_std`'si 0.196 — hedef, ölçüm
+gürültüsünün yirmide biri. Buna bölünce bias %5296 çıkıyordu ve output yanlışlıkla
 "bias-baskın" sınıflanıyordu.
 
 **Eşik neden 1.0:** Veriden doğruluyor. `Stage2.M6`'nın oranı **0.05**, sıradaki
@@ -205,8 +205,8 @@ mi yoksa gerçek proses mi olduğu ayrı bir karar; R8 eşiğiyle çözülmemeli
 **Bu bir varsayım değil, test edilip reddedilmiş bir yöntemdir** — kayıtta duruyor
 çünkü standart SPC akışının neden uygulanmadığını açıklıyor.
 
-I-MR grafiği ardışık gözlemlerin bağımsız olduğunu varsayar. Bu veride lag-1
-otokorelasyon 0.93–0.99. Sonuç: `MR_bar` küçük çıkıyor → `sigma_st` düşük tahmin
+I-MR grafiği ardışık gözlemlerin bağımsız olduğunu varsayar. Bu veride kapsam içi
+output'ların lag-1 otokorelasyonu medyan 0.89 (0.37–0.99). Sonuç: `MR_bar` küçük çıkıyor → `sigma_st` düşük tahmin
 ediliyor → kontrol limitleri gereğinden dar → medyan out-of-control oranı **%41.8**
 (kararlı bir proseste ~%0.3 beklenir).
 

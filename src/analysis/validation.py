@@ -35,6 +35,7 @@ sys.path.insert(0, str(ROOT / "src" / "data_processing"))
 import schema  # noqa: E402
 import splits  # noqa: E402
 from sklearn.ensemble import HistGradientBoostingRegressor, RandomForestRegressor  # noqa: E402
+from train import TEST_FRAC  # noqa: E402  (Faz 3/4'un tek bolmesi)
 
 warnings.filterwarnings("ignore")
 
@@ -45,6 +46,8 @@ OUT = ROOT / "reports" / "08_validation_report.md"
 N_FOLDS = 5
 CV_ACTIVE = 1.0
 MIN_BIN_N = 150
+N_DRIFT_PARTS = 8        # V3: ardisik pencere sayisi
+SAMPLING_HZ = 1.0        # verify_a1: ornekleme 1 Hz
 
 
 def make_model(name):
@@ -114,7 +117,7 @@ def v2_empirical_stability(df, targets, param, n_parts=4):
     return pd.DataFrame(rows)
 
 
-def v3_drift(df, targets, n_parts=8):
+def v3_drift(df, targets, n_parts=N_DRIFT_PARTS):
     """Ardisik pencerelerde deviation ortalamasi ne kadar kayiyor?"""
     edges = np.linspace(0, len(df), n_parts + 1).astype(int)
     rows = []
@@ -164,19 +167,29 @@ def main():
     cpp_lags = [(c, *splits.acf_decay_lag(df[c], return_censored=True))
                 for c in cpps]
     corr = pd.read_csv(ROOT / "reports" / "correlation_table.csv")
+    # Faz 4 bulgusunun dilimi: V2'deki ile ayni kantil bolmesinin en dusugu
+    try:
+        first_bin = pd.qcut(df[param], 4, duplicates="drop").cat.categories[0]
+    except ValueError:
+        first_bin = None
     write_report(v1, v2, v3, targets, param, embargo, cpp_lags, len(df),
-                 neff_median=float(corr.n_eff.median()))
+                 neff_median=float(corr.n_eff.median()),
+                 n_dvs=len(dvs), dvs_embargo=splits.suggest_embargo(df, dvs),
+                 first_bin=first_bin)
     v1.to_csv(ROOT / "reports" / "validation_folds.csv", index=False)
     print(f"\nyazildi: {OUT}")
 
 
-def write_report(v1, v2, v3, targets, param, embargo, cpp_lags, df_len, neff_median):
+def write_report(v1, v2, v3, targets, param, embargo, cpp_lags, df_len, neff_median,
+                 n_dvs, dvs_embargo, first_bin):
     L = []
     w = L.append
+    rows_txt = f"{df_len:,}".replace(",", ".")   # 14088 -> "14.088"
     w("# Faz 5 - Validation ve Dayaniklilik\n")
     w("Kaynak: `data/processed/clean_v1.csv`  ")
     w("Uretildi: `python src/analysis/validation.py`\n")
-    w("Faz 3 ve 4'un butun sonuclari **tek bir bolmeye** dayaniyordu (son %30).")
+    w("Faz 3 ve 4'un butun sonuclari **tek bir bolmeye** dayaniyordu "
+      f"(son %{100 * TEST_FRAC:.0f}).")
     w("O donem atipikse tum sonuclar yaniltici olur. Burada ayni sorular zaman")
     w(f"ekseni boyunca ilerleyen **{N_FOLDS} ayri pencerede** tekrar soruluyor.\n")
 
@@ -184,7 +197,7 @@ def write_report(v1, v2, v3, targets, param, embargo, cpp_lags, df_len, neff_med
     w("## V0 - Embargo hesabi beklenmedik bir sey gosterdi\n")
     w("Embargo, karar degiskenlerinin otokorelasyonunun 0.2 altina indigi")
     w(f"mesafeye gore secilir. Aktif CPP'ler icin bu deger **{embargo} satir**")
-    w("cikti. Faz 3'te 24 `controlled` kolonun medyani 49 satirdi.\n")
+    w(f"cikti. Faz 3'te {n_dvs} `controlled` kolonun medyani {dvs_embargo} satirdi.\n")
     w("| parametre | sonumlenme lag'i | durum |")
     w("|---|---|---|")
     for c, lag, cens in cpp_lags:
@@ -197,10 +210,11 @@ def write_report(v1, v2, v3, targets, param, embargo, cpp_lags, df_len, neff_med
     w("> tarama siniri icinde hic sonmuyor.** Donen sayi bir olcum degil,")
     w("> aramanin durdugu yer; gercek sonumlenme daha uzakta.")
     w(">")
-    w("> Bunun anlami K5'in sanilandan agir olmasi: karar degiskenleri **33+")
-    w("> dakika** boyunca otokorelasyonlu. 14.088 satirlik veri, bu parametreler")
+    w("> Bunun anlami K5'in sanilandan agir olmasi: karar degiskenleri "
+      f"**{int(embargo / SAMPLING_HZ // 60)}+")
+    w(f"> dakika** boyunca otokorelasyonlu. {rows_txt} satirlik veri, bu parametreler")
     w(f"> acisindan yaklasik **{df_len // embargo if embargo else 0} bagimsiz blok**")
-    w("> demek -- 14.088 degil.")
+    w(f"> demek -- {rows_txt} degil.")
     w(">")
     w(f"> Faz 2'de olculen medyan `n_eff` = {neff_median:.0f} bu tabloyla birlikte okunmali:")
     w("> o deger output serilerini de iceriyordu. **Optimizasyonun ogrenmesi")
@@ -241,7 +255,7 @@ def write_report(v1, v2, v3, targets, param, embargo, cpp_lags, df_len, neff_med
 
         w("`tek_split` = Faz 3/4'te kullanilan tek bolmenin sonucu.  ")
         w("`fold 1` ayri sutunda: yetersiz train, yorum disi.\n")
-        w("| output | tek_split | fold 1 (yetersiz) | fold 2-5 medyani | "
+        w(f"| output | tek_split | fold 1 (yetersiz) | fold 2-{N_FOLDS} medyani | "
           "en dusuk | en yuksek | pozitif |")
         w("|---|---|---|---|---|---|---|")
         for _, r in agg.iterrows():
@@ -262,7 +276,8 @@ def write_report(v1, v2, v3, targets, param, embargo, cpp_lags, df_len, neff_med
                 w(f">   - `{r.output}`: {r.pozitif}/{r.fold} fold, "
                   f"medyan {r.medyan:+.4f} (tek split {r.tek_split:+.4f})")
         w(">")
-        w("> **Bu, Faz 3 ve 4'un sonuclarini dogrudan etkiliyor.** \"5 output'ta")
+        w("> **Bu, Faz 3 ve 4'un sonuclarini dogrudan etkiliyor.** "
+          f"\"{len(targets)} output'ta")
         w("> persistence gecildi\" ifadesi tek bolmeye dayaniyordu; walk-forward")
         w("> bu ifadeyi desteklemiyor. Faz 4'un optimizasyon onerileri de ayni")
         w("> zemine dayandigi icin **guven derecesi dusurulmelidir.**\n")
@@ -270,7 +285,9 @@ def write_report(v1, v2, v3, targets, param, embargo, cpp_lags, df_len, neff_med
     # ---- V2 ----
     w("## V2 - Ampirik optimizasyon bulgusu zamanda tutuyor mu?\n")
     w(f"Faz 4'un tek tutarli bulgusu: `{param.replace('.C.Actual','')}` en dusuk")
-    w("dilimi (14-17) butun output'larda en iyiydi. Bu bulgu tek bir donemin")
+    bin_txt = (f" ({first_bin.left:.0f}-{first_bin.right:.0f})"
+               if first_bin is not None else "")
+    w(f"dilimi{bin_txt} butun output'larda en iyiydi. Bu bulgu tek bir donemin")
     w("artifakti mi, yoksa veri boyunca tutuyor mu?\n")
     if v2.empty:
         w("*Yeterli gozlem yok.*\n")
@@ -305,7 +322,8 @@ def write_report(v1, v2, v3, targets, param, embargo, cpp_lags, df_len, neff_med
 
     # ---- V3 ----
     w("## V3 - Dagilim kaymasi ne kadar buyuk?\n")
-    w("K16'da fark edilen kayma burada olculuyor: veri 8 ardisik pencereye")
+    w("K16'da fark edilen kayma burada olculuyor: veri "
+      f"{N_DRIFT_PARTS} ardisik pencereye")
     w("bolunup her birinde deviation ortalamasi hesaplandi. `kayma_sigma`,")
     w("pencereler arasi farkin serinin kendi standart sapmasina orani.\n")
     if v3.empty:

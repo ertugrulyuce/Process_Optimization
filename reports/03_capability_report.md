@@ -8,7 +8,7 @@ Kapsam: 25 output (Faz 1'de kapsam ici sayilanlar).
 ## Onemli uyari - kontrol grafiklerinin gecerliligi
 
 I-MR kontrol grafigi **ardisik gozlemlerin bagimsiz oldugunu varsayar.**
-Bu veride lag-1 otokorelasyonu 0.93-0.99 (K5). Otokorelasyonlu bir seride:
+Bu 25 output'ta lag-1 otokorelasyonu medyan **0.89** (aralik 0.37-0.99; K5). Otokorelasyonlu bir seride:
 
 - Ardisik farklar kucuk oldugu icin `MR_bar` kucuk cikar,
 - dolayisiyla `sigma_st` oldugundan kucuk tahmin edilir,

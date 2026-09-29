@@ -27,6 +27,11 @@ OUT = ROOT / "reports" / "01_data_quality_report.md"
 # KPI'si serinin kendisinden cok dropout desenini olcer.
 MIN_VALID_RATIO = 0.50
 
+# Zaman ekseninde "bosluk" sayilan adim (sn) ve "dusuk kardinalite" ust siniri.
+# Rapor metni bu sabitlerden uretilir.
+GAP_THRESHOLD_S = 60
+LOW_CARD_LIMIT = 10
+
 
 def load() -> pd.DataFrame:
     df = pd.read_csv(RAW)
@@ -42,7 +47,8 @@ def sec_time(df: pd.DataFrame) -> dict[str, Any]:
         monotonic=bool(t.is_monotonic_increasing),
         dup_ts=int(t.duplicated().sum()),
         step_counts=d.value_counts().head(5).to_dict(),
-        gaps_gt_60s=int((d > 60).sum()),
+        step_mode=float(d.mode().iloc[0]),
+        gaps_gt_60s=int((d > GAP_THRESHOLD_S).sum()),
         span_hours=(t.max() - t.min()).total_seconds() / 3600,
     )
 
@@ -93,8 +99,17 @@ def sec_constants(df: pd.DataFrame) -> dict[str, Any]:
     return dict(
         constant=list(nu[nu == 1].index),
         two_valued=list(nu[nu == 2].index),
-        low_card={c: int(nu[c]) for c in nu[(nu > 2) & (nu < 10)].index},
+        low_card={c: int(nu[c]) for c in nu[(nu > 2) & (nu < LOW_CARD_LIMIT)].index},
     )
+
+
+def raw_levels(df: pd.DataFrame, machine: str) -> tuple[int, str]:
+    """Makinenin hammadde kolon sayisi ve aldiklari farkli deger sayisi ("2", "4-5")."""
+    cols = [c for c in df.columns
+            if schema.classify(c) == schema.RAW_MAT and c.startswith(f"{machine}.")]
+    nu = [int(df[c].nunique()) for c in cols]
+    lv = str(min(nu)) if min(nu) == max(nu) else f"{min(nu)}-{max(nu)}"
+    return len(cols), lv
 
 
 def md_table(df: pd.DataFrame) -> str:
@@ -142,11 +157,14 @@ def main() -> None:
     w("## 2. Zaman ekseni\n")
     w(f"- Aralik: **{time['start']} -> {time['end']}**")
     w(f"- Toplam sure: **{time['span']}** (~{time['span_hours']:.1f} saat)")
-    w(f"- Ornekleme: 1 Hz. Adim dagilimi (sn): {time['step_counts']}")
+    w(f"- Ornekleme: {1 / time['step_mode']:g} Hz. "
+      f"Adim dagilimi (sn): {time['step_counts']}")
     w(f"- Monotonik artan: {time['monotonic']}")
     w(f"- **Duplicate timestamp: {time['dup_ts']}**")
-    w(f"- 60 sn'den buyuk bosluk: {time['gaps_gt_60s']}\n")
-    w("> **BULGU Z1 - Veri tek bir ~4 saatlik pencereden geliyor.** 14.088 satir")
+    w(f"- {GAP_THRESHOLD_S} sn'den buyuk bosluk: {time['gaps_gt_60s']}\n")
+    n_rows_tr = f"{df.shape[0]:,}".replace(",", ".")  # Turkce binlik ayraci
+    w(f"> **BULGU Z1 - Veri tek bir ~{time['span_hours']:.0f} saatlik pencereden "
+      f"geliyor.** {n_rows_tr} satir")
     w("> cok gorunuyor ama bagimsiz gozlem sayisi degil. Long-term process")
     w("> capability, vardiya/rejim karsilastirmasi ve gun-ici trend analizi bu")
     w("> veriyle YAPILAMAZ. Faz 2 short-term capability ile sinirlidir.\n")
@@ -155,23 +173,32 @@ def main() -> None:
     w(f"- Tek degerli (sifir varyans): **{len(consts['constant'])} kolon** - "
       "tamami Stage2 setpoint'leri")
     w(f"- Iki degerli: **{len(consts['two_valued'])} kolon**")
-    w(f"- Kardinalitesi 10 altinda olan digerleri: {consts['low_card']}\n")
+    w(f"- Kardinalitesi {LOW_CARD_LIMIT} altinda olan digerleri: {consts['low_card']}\n")
+    n_s2_const = sum(1 for c in consts["constant"]
+                     if schema.classify(c) == schema.OUT_SETPNT and c.startswith("Stage2."))
+    n_m2, lv_m2 = raw_levels(df, "Machine2")
+    _, lv_m3 = raw_levels(df, "Machine3")
     w("> **BULGU S1 - Setpoint'ler degisken degil, sabit hedeftir.** Stage2'nin")
-    w("> 15 setpoint'i tek deger; Stage1'inkiler sabit + durus blogunda 0.")
+    w(f"> {n_s2_const} setpoint'i tek deger; Stage1'inkiler sabit + durus blogunda 0.")
     w("> Sonuc: setpoint bir MODEL GIRDISI olarak kullanilamaz (sifir bilgi).")
     w("> Tek rolu, deviation KPI'sinin referans noktasi olmaktir.\n")
-    w("> **BULGU S2 - Hammadde ozellikleri neredeyse sabit.** Machine2'nin 4")
-    w("> Property'si 2, Machine3'unkiler 3 farkli deger aliyor. Hammadde")
+    w(f"> **BULGU S2 - Hammadde ozellikleri neredeyse sabit.** Machine2'nin {n_m2}")
+    w(f"> Property'si {lv_m2}, Machine3'unkiler {lv_m3} farkli deger aliyor. Hammadde")
     w("> varyasyonu bu veri setinde zayif bir aciklayici degiskendir.\n")
 
     w("## 4. Output olcum kalitesi\n")
     w(md_table(outs))
     w("")
     bad = outs[outs.modelable == "HAYIR"]
+    # Ornekler: en parcali kesintili output ve en yuksek sifir oranli output
+    frag = outs.loc[outs.zero_runs.idxmax()]
+    worst = outs.loc[outs.zero_pct.idxmax()]
     w("> **BULGU O1 - Sifirlar eksik veridir, olcum degil.** Sifirlar bitisik tek")
     w("> bir durus blogunda degil, yuzlerce kisa kesinti halinde dagilmis")
-    w("> (ornegin Stage1.M14: 673 ayri kesinti). Setpoint'i 2.74 olan bir")
-    w("> boyutun %95 oraninda tam 0 olmasi fiziksel degil, sensor dropout'tur.")
+    w(f"> (ornegin {frag.output}: {frag.zero_runs} ayri kesinti). "
+      f"Setpoint'i {worst.setpoint} olan bir")
+    w(f"> boyutun %{worst.zero_pct:.0f} oraninda tam 0 olmasi fiziksel degil, "
+      "sensor dropout'tur.")
     w("> Bu degerler NaN'a cevrilmeli, sifir olarak modele girmemelidir.\n")
     w(f"> **BULGU O2 - {len(bad)} output modellenemez** "
       f"(gecerli veri < %{MIN_VALID_RATIO * 100:.0f}): "

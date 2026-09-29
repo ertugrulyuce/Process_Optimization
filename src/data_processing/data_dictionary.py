@@ -21,12 +21,13 @@ ROOT = Path(__file__).resolve().parents[2]
 RAW = ROOT / "data" / "raw" / "continuous_factory_process.csv"
 OUT = ROOT / "reports" / "data_dictionary.md"
 
+# {alan}'lar main() icinde veriden doldurulur (bkz. role_facts)
 ROLE_DESC = {
-    "time": "Zaman damgasi (1 Hz).",
-    schema.AMBIENT: "Cevre kosulu. Kontrol edilemez. Efektif ornekleme ~350 sn "
-                    "(K4) -> 4 saatte ~40 bagimsiz gozlem.",
-    schema.RAW_MAT: "Gelen hammadde ozelligi. Kontrol edilemez. 2-5 ayrik seviye, "
-                    "cok seyrek degisim (K4) -> lot etiketi gibi ele alinir.",
+    "time": "Zaman damgasi ({hz:g} Hz).",
+    schema.AMBIENT: "Cevre kosulu. Kontrol edilemez. Efektif ornekleme ~{amb_period:.0f} sn "
+                    "(K4) -> {hours:.0f} saatte ~{amb_obs} bagimsiz gozlem.",
+    schema.RAW_MAT: "Gelen hammadde ozelligi. Kontrol edilemez. {lv_min}-{lv_max} ayrik "
+                    "seviye, cok seyrek degisim (K4) -> lot etiketi gibi ele alinir.",
     schema.CONTROLLED: "Operatorun ayarlayabildigi parametre (VARSAYIM A1). "
                        "Optimizasyonun karar degiskeni.",
     schema.MEASURED: "Proses tepkisi. Ayarlanmaz, olculur. Teshis degiskeni; "
@@ -46,6 +47,24 @@ STAGE_DESC = {
     "stage2_out": "Stage 2 cikti olcumu (nihai)",
     "-": "-",
 }
+
+
+def role_facts(df: pd.DataFrame, t: pd.DataFrame) -> dict[str, float | int]:
+    """ROLE_DESC metnindeki sayilar: kayit frekansi, pencere, ambient/hammadde."""
+    ts = df["time_stamp"]
+    # verify_a1 ile ayni sayim: ilk satirin NaN farki degisim sayilmaz
+    amb_obs = max(int((df[c].diff().dropna() != 0).sum())
+                  for c in t.column[t.role == schema.AMBIENT])
+    lv = t.n_unique[t.role == schema.RAW_MAT]
+    return dict(
+        hz=1 / ts.diff().dt.total_seconds().mode().iloc[0],
+        hours=(ts.max() - ts.min()).total_seconds() / 3600,
+        amb_obs=amb_obs,
+        # "~" degeri onlar basamagina yuvarlanir (352 -> 350)
+        amb_period=round(len(df) / amb_obs, -1),
+        lv_min=int(lv.min()),
+        lv_max=int(lv.max()),
+    )
 
 
 def main() -> None:
@@ -81,6 +100,8 @@ def main() -> None:
         rows.append(rec)
 
     t = pd.DataFrame(rows)
+    facts = role_facts(df, t)
+    role_desc = {k: v.format(**facts) for k, v in ROLE_DESC.items()}
 
     lines: list[str] = []
     w = lines.append
@@ -93,7 +114,7 @@ def main() -> None:
     w("## Rol tanimlari\n")
     w("| Rol | Adet | Aciklama |")
     w("|---|---|---|")
-    for role, desc in ROLE_DESC.items():
+    for role, desc in role_desc.items():
         w(f"| `{role}` | {int((t.role == role).sum())} | {desc} |")
     w("")
 
@@ -113,7 +134,7 @@ def main() -> None:
         if sub.empty:
             continue
         w(f"### `{role}` ({len(sub)} kolon)\n")
-        w(f"*{ROLE_DESC[role]}*\n")
+        w(f"*{role_desc[role]}*\n")
         cols = ["column", "stage", "machine", "min", "max", "mean", "std",
                 "n_unique", "n_changes", "zero_pct", "note"]
         w("| " + " | ".join(cols) + " |")

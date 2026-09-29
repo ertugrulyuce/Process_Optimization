@@ -15,7 +15,7 @@ yuksek olur. Bu test SONUCSUZ kaldi, iki nedenle:
      olcumudur. Setpoint sabit olsa bile actual dalgalanir. Yuksek hold_ratio
      beklemek hataliydi.
   2. hold_ratio aslinda SENSOR GUNCELLEME FREKANSINI olcuyor. AmbientTemperature
-     370 saniyede bir guncellendigi icin hold_ratio=0.997 cikiyor; kontrol
+     ~350 saniyede bir guncellendigi icin hold_ratio=0.997 cikiyor; kontrol
      edildigi icin degil.
 
 Test A1'i ne dogruluyor ne curutuyor. Sonuc boyle raporlanir, zorlanmaz.
@@ -60,7 +60,12 @@ def profile(s: pd.Series) -> dict[str, float | int]:
 
 
 def main() -> None:
-    df = pd.read_csv(RAW).drop(columns=["time_stamp"])
+    raw = pd.read_csv(RAW)
+    # Pencere uzunlugu ve kayit frekansi rapor metninde kullanilir
+    ts = pd.to_datetime(raw["time_stamp"])
+    span_h = (ts.max() - ts.min()).total_seconds() / 3600
+    rec_hz = 1 / ts.diff().dt.total_seconds().mode().iloc[0]
+    df = raw.drop(columns=["time_stamp"])
     rows = []
     for c in df.columns:
         role = schema.classify(c)
@@ -115,21 +120,30 @@ def main() -> None:
     w("> yapilacak; sonuc bu varsayima bagliysa acikca belirtilecek.\n")
 
     w("## 3. Testten cikan gercek bulgu: ornekleme frekansi\n")
-    w("Butun kolonlar 1 Hz *kaydedilmis* ama 1 Hz *olculmemis*. Efektif")
+    w(f"Butun kolonlar {rec_hz:g} Hz *kaydedilmis* ama {rec_hz:g} Hz *olculmemis*. Efektif")
     w("guncelleme periyotlari cok farkli:\n")
     low = t[t.n_changes < LOW_INFO_THRESHOLD].sort_values("n_changes")
-    w(f"**{len(low)} kolonun 4 saatlik pencerede {LOW_INFO_THRESHOLD}'den az degisimi var:**\n")
+    w(f"**{len(low)} kolonun {span_h:.0f} saatlik pencerede "
+      f"{LOW_INFO_THRESHOLD}'den az degisimi var:**\n")
     w("| column | role | degisim sayisi | guncelleme periyodu (sn) | ayrik seviye |")
     w("|---|---|---|---|---|")
     for _, r in low.iterrows():
         w(f"| {r.column} | {r.role} | {r.n_changes} | {r.update_period_s} | {r.n_levels} |")
     w("")
+    hum = t[t.column == "AmbientConditions.AmbientHumidity.U.Actual"].iloc[0]
+    amb_n = t[t.role == schema.AMBIENT].n_changes
+    lv = t[t.role == schema.RAW_MAT].n_levels
+    n_rows_tr = f"{len(df):,}".replace(",", ".")  # Turkce binlik ayraci
     w("> **BULGU F1 - Ambient kosullari pratikte sabittir.** `AmbientTemperature`")
-    w("> ~352 sn'de, `AmbientHumidity` ~371 sn'de bir guncelleniyor. 4 saatlik")
-    w("> pencerede bu, ~38-40 bagimsiz gozlem demek. Bu iki degiskeni output")
+    w(f"> ~{amb.update_period_s:.0f} sn'de, `AmbientHumidity` ~{hum.update_period_s:.0f} "
+      f"sn'de bir guncelleniyor. {span_h:.0f} saatlik")
+    w(f"> pencerede bu, ~{amb_n.min()}-{amb_n.max()} bagimsiz gozlem demek. Bu iki "
+      "degiskeni output")
     w("> deviation'inin aciklayicisi olarak kullanmak istatistiksel olarak zayiftir;")
-    w("> bulunacak herhangi bir iliski 40 noktaya dayanir, 14.088'e degil.\n")
-    w("> **BULGU F2 - Hammadde ozellikleri lot bazli, surekli degil.** 2-5 ayrik")
+    w(f"> bulunacak herhangi bir iliski {amb_n.max()} noktaya dayanir, "
+      f"{n_rows_tr}'e degil.\n")
+    w(f"> **BULGU F2 - Hammadde ozellikleri lot bazli, surekli degil.** "
+      f"{lv.min()}-{lv.max()} ayrik")
     w("> seviye ve cok seyrek degisim. Bunlar surekli degisken gibi degil,")
     w("> kategorik lot etiketi gibi ele alinmalidir.\n")
 

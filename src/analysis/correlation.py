@@ -7,7 +7,7 @@ olcer ve **istatistiksel anlamliligi efektif ornek buyuklugu ile duzeltir.**
 IKI DUZELTME BIRDEN UYGULANIR
 -----------------------------
 1. OTOKORELASYON (K5). 14.088 gozlemle sirali test yapilirsa r = 0.02 bile
-   p < 0.05 cikar. Ama ardisik gozlemler bagimsiz degil (lag-1 0.93-0.99).
+   p < 0.05 cikar. Ama ardisik gozlemler bagimsiz degil (lag-1 yuksek).
    Bartlett'in tam formulu:
 
        n_eff = n / (1 + 2 * sum_k (1 - k/n) * rho_x(k) * rho_y(k))
@@ -43,6 +43,13 @@ OUT = ROOT / "reports" / "04_correlation_report.md"
 ALPHA = 0.05
 # En az bu kadar efektif gozlem yoksa iliski hakkinda hukum verilmez.
 MIN_N_EFF = 30
+# K7: CV'si bu yuzdenin altindaki karar degiskeni "pasif" sayilir.
+MIN_CV_PCT = 1.0
+# BULGU R3'te "guclu" iliski esigi (|r|).
+STRONG_R = 0.3
+# Uzun hafizayi gostermek icin raporda anilan seri ve lag.
+LONG_MEMORY_COL = "Machine1.MotorRPM.C.Actual"
+LONG_MEMORY_LAG = 600
 
 
 def bh_fdr(p: np.ndarray) -> np.ndarray:
@@ -141,8 +148,15 @@ def main():
     # Sadece gercekten oynatilmis karar degiskenleri anlamli sonuc verebilir (K7).
     dvs = [c for c in schema.decision_variables(df.columns) if c in df.columns]
     cv = {c: 100 * df[c].std() / df[c].mean() for c in dvs}
-    active = [c for c in dvs if cv[c] >= 1.0]     # K7: CV >= %1
-    inactive = [c for c in dvs if cv[c] < 1.0]
+    active = [c for c in dvs if cv[c] >= MIN_CV_PCT]
+    inactive = [c for c in dvs if cv[c] < MIN_CV_PCT]
+    n_obs = len(df)
+    n_obs_txt = f"{n_obs:,}".replace(",", ".")
+    # audit.py'deki gibi pandas autocorr; acf() farkli paydayla daha dusuk verir
+    long_ac = float(df[LONG_MEMORY_COL].autocorr(LONG_MEMORY_LAG))
+    long_name = LONG_MEMORY_COL.replace(".C.Actual", "")
+    lag1_dv = float(np.median([df[c].autocorr(1) for c in dvs]))
+    lag1_dev = float(np.median([df[f"{o}.dev"].autocorr(1) for o in ins.output]))
 
     rows = []
     for _, orow in ins.iterrows():
@@ -190,14 +204,16 @@ def main():
       f"= **{n_pairs} cift** incelendi.\n")
 
     w("## Yontem: neden efektif ornek buyuklugu\n")
-    w("14.088 gozlemle siradan bir anlamlilik testi yapilirsa `r = 0.02` bile")
-    w("`p < 0.05` verir. Ama ardisik gozlemler bagimsiz degil (K5: lag-1")
-    w("otokorelasyon 0.93-0.99). Bartlett'in **tam** duzeltmesi:\n")
+    w(f"{n_obs_txt} gozlemle siradan bir anlamlilik testi yapilirsa `r = 0.02` bile")
+    w(f"`p < {ALPHA}` verir. Ama ardisik gozlemler bagimsiz degil (K5: lag-1")
+    w(f"otokorelasyon medyani karar degiskenlerinde {lag1_dv:.2f}, output sapmalarinda "
+      f"{lag1_dev:.2f}). Bartlett'in **tam** duzeltmesi:\n")
     w("```")
     w("n_eff = n / (1 + 2 * sum_k (1 - k/n) * rho_x(k) * rho_y(k))")
     w("```")
     w("Yalnizca lag-1 kullanan basitlestirilmis surum AR(1) varsayar. Bu veride")
-    w("seriler cok daha uzun hafizali (`Machine1.MotorRPM` lag-600'de hala 0.94),")
+    w(f"seriler cok daha uzun hafizali (`{long_name}` lag-{LONG_MEMORY_LAG}'de "
+      f"hala {long_ac:.2f}),")
     w("dolayisiyla lag-1 surumu otokorelasyonu ciddi sekilde eksik duzeltirdi --")
     w(f"ayni ciftlerde medyan n_eff'i {med_neff_ar1:.0f} verir; tam formul {med_neff:.0f}. "
       "Tum lag'ler")
@@ -216,8 +232,8 @@ def main():
     w("1. **Otokorelasyon** (`n_eff`): her cift kendi icinde kac bagimsiz")
     w("   gozleme dayaniyor?")
     w(f"2. **Coklu karsilastirma** (Benjamini-Hochberg FDR): {n_pairs} cift test")
-    w("   ediliyor. Hicbir gercek iliski olmasa bile alpha=0.05 ile ~"
-      f"{int(0.05*n_pairs)} cift")
+    w(f"   ediliyor. Hicbir gercek iliski olmasa bile alpha={ALPHA} ile ~"
+      f"{int(ALPHA*n_pairs)} cift")
     w("   sans eseri anlamli cikardi. q-degeri bunu hesaba katar.\n")
     w(f"> **BULGU R1 - Duzeltme yapilmazsa {n_naive - n_fdr} sahte iliski")
     w("> raporlanirdi.** Ham testte ciftlerin %"
@@ -225,12 +241,12 @@ def main():
     w(f"> karsilastirma duzeltmelerinden sonra bu oran "
       f"%{100*n_fdr/n_pairs:.0f}'e dusuyor.")
     w("> Medyan efektif ornek buyuklugu **"
-      f"{t.n_eff.median():.0f}** -- 14.088 degil. Yani veri seti, gorunen")
+      f"{t.n_eff.median():.0f}** -- {n_obs_txt} degil. Yani veri seti, gorunen")
     w("> buyuklugune ragmen istatistiksel olarak kucuk bir ornektir (K1).\n")
 
     w("## Karar degiskenlerinin durumu\n")
     w("K7 geregi yalnizca gercekten oynatilmis degiskenler bilgi tasiyabilir.")
-    w(f"**Aktif (CV >= %1): {len(active)}**, **pasif: {len(inactive)}**.\n")
+    w(f"**Aktif (CV >= %{MIN_CV_PCT:g}): {len(active)}**, **pasif: {len(inactive)}**.\n")
     w("| degisken | CV % | durum |")
     w("|---|---|---|")
     for c in sorted(dvs, key=lambda x: -cv[x]):
@@ -278,9 +294,9 @@ def main():
             right = "*yok* | -"
         w(f"| `{out}` | `{top.driver}` | ({top.r}, {top.n_eff}) | {right} |")
     w("")
-    strong = vt[vt.sig_fdr & (vt.abs_r > 0.3)]
+    strong = vt[vt.sig_fdr & (vt.abs_r > STRONG_R)]
     w("> **BULGU R3 - Variability-baskin output'lar icin aktif karar")
-    w("> degiskenleriyle abs(r) > 0.3 olan **FDR-sonrasi anlamli** iliski "
+    w(f"> degiskenleriyle abs(r) > {STRONG_R} olan **FDR-sonrasi anlamli** iliski "
       f"sayisi: **{len(strong)}**.")
     if len(strong) == 0:
         w("> Yani mevcut karar degiskenleri, optimize etmek istedigimiz")
@@ -295,13 +311,14 @@ def main():
             w(f">   - `{r.output}` <- `{r.driver}`: r = {r.r} (n_eff {r.n_eff})")
     w("")
 
-    w("## Tam tablo (ilk 60, |r| azalan)\n")
+    n_full = 60
+    w(f"## Tam tablo (ilk {n_full}, |r| azalan)\n")
     cols = ["output", "error_type", "driver", "active", "cv_pct", "r", "n",
             "n_eff", "p_naive", "p_eff", "q_eff", "sig_naive", "sig_eff",
             "sig_fdr"]
     w("| " + " | ".join(cols) + " |")
     w("|" + "|".join("---" for _ in cols) + "|")
-    for _, r in t.nlargest(60, "abs_r").iterrows():
+    for _, r in t.nlargest(n_full, "abs_r").iterrows():
         w("| " + " | ".join(
             "" if pd.isna(r[c]) else str(r[c]) for c in cols) + " |")
     w("")
@@ -315,9 +332,9 @@ def main():
     print(f"ham n ile anlamli  : {n_naive} (%{100*n_naive/n_pairs:.1f})")
     print(f"n_eff ile anlamli  : {n_eff_sig} (%{100*n_eff_sig/n_pairs:.1f})")
     print(f"n_eff+FDR anlamli  : {n_fdr} (%{100*n_fdr/n_pairs:.1f})")
-    print(f"medyan n_eff       : {t.n_eff.median():.0f}  (n = 14088)")
+    print(f"medyan n_eff       : {t.n_eff.median():.0f}  (n = {n_obs})")
     print(f"\naktif karar degiskeni: {len(active)}/{len(dvs)}")
-    print(f"variability-baskin output'lar icin |r|>0.3 anlamli iliski: {len(strong)}")
+    print(f"variability-baskin output'lar icin |r|>{STRONG_R} anlamli iliski: {len(strong)}")
 
 
 if __name__ == "__main__":

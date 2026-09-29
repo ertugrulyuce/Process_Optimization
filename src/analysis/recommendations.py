@@ -24,8 +24,15 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src" / "modeling"))
 sys.path.insert(0, str(ROOT / "src" / "data_processing"))
+sys.path.insert(0, str(ROOT / "src" / "analysis"))
 import schema  # noqa: E402
 import splits  # noqa: E402
+
+# Esikler ve V2/V3 hesaplari tanimlandiklari yerden alinir; burada ayrica
+# yazilirsa rapor metni kaynaginin yaptigindan sessizce ayrisabilir.
+from audit import MIN_VALID_RATIO  # noqa: E402
+from clean import BIAS_BAND  # noqa: E402
+from validation import v2_empirical_stability, v3_drift  # noqa: E402
 
 PROC = ROOT / "data" / "processed" / "clean_v1.csv"
 OUT = ROOT / "reports" / "09_recommendations.md"
@@ -35,6 +42,13 @@ CV_ACTIVE = 1.0
 #   n_per_group ~= 16 / d^2      (Cohen'in pratik yaklasimi)
 POWER_CONST = 16
 SAMPLING_HZ = 1.0
+# DOE: bir run = yeni ayarda dengelenme + olcum (K13: transport delay ~270 sn + pay)
+RUN_SECONDS = 300
+N_REPLICATES = 3
+# Onerilen DOE seviyeleri mevcut araligin bu kesri kadar disina tasir
+DOE_EXTEND = 0.25
+# Faz 4'un tek tutarli ampirik bulgusunun parametresi (V2 ile ayni)
+EMPIRICAL_PARAM = "Machine4.Pressure.C.Actual"
 
 
 def observed_effects(df, cpps, targets):
@@ -86,8 +100,7 @@ def required_experiment(d, block_len, n_levels=2):
     obs_hours = obs_rows / SAMPLING_HZ / 3600
 
     # DOE: her run bagimsiz; run suresi ~ dengelenme + olcum
-    run_seconds = 300          # K13: transport delay ~270 sn + pay
-    doe_hours = total_obs * run_seconds / 3600
+    doe_hours = total_obs * RUN_SECONDS / 3600
     return dict(cohen_d=round(d, 4),
                 n_per_group=int(np.ceil(n_per_group)),
                 toplam_gozlem=int(np.ceil(total_obs)),
@@ -102,14 +115,8 @@ def main():
     fold = pd.read_csv(ROOT / "reports" / "validation_folds.csv")
     cap = pd.read_csv(ROOT / "reports" / "capability_table.csv")
     link = pd.read_csv(ROOT / "reports" / "stage_link_table.csv")
-    # Ozet sayilar ilgili adimin ciktisindan okunur, buraya elle yazilmaz:
-    # elle yazilanlar pipeline degistiginde kaydi (orn. %38.5 -> %41.8).
-    facts = dict(
-        # ham veride NaN yok (01 raporu), dolayisiyla her NaN temizlik isi
-        invalid_pct=100 * (1 - kpi.n_valid.sum() / (len(kpi) * len(df))),
-        ooc_median=float(cap.ooc_pct.median()),
-        n_reliable_pairs=int(link.reliable.sum()),
-    )
+    quality = pd.read_csv(ROOT / "reports" / "output_quality_table.csv")
+    a1 = pd.read_csv(ROOT / "reports" / "a1_verification.csv")
 
     dvs = [c for c in schema.decision_variables(df.columns) if c in df.columns]
     cpps = [c for c in dvs if 100 * df[c].std() / df[c].mean() >= CV_ACTIVE]
@@ -117,7 +124,35 @@ def main():
 
     s1 = res[res.feature_set == "controlled"]
     best = s1.loc[s1.groupby("output").skill_vs_pers.idxmax()]
-    targets = list(best[best.skill_vs_pers > 0].output)
+    tgt = best[best.skill_vs_pers > 0]
+    targets = list(tgt.output)
+
+    # V2/V3 validation.py'nin fonksiyonlariyla yeniden hesaplanir (model
+    # fit'i yok, ucuz); 08 raporundaki tabloyla ayni tanim.
+    v2 = v2_empirical_stability(df, tgt, EMPIRICAL_PARAM)
+    piv = v2.pivot(index="output", columns="parca", values="ilk_dilim_en_iyi_mi")
+    v3 = v3_drift(df, tgt)
+    rel = link[link.reliable]
+    # Ozet sayilar ilgili adimin ciktisindan okunur, buraya elle yazilmaz:
+    # elle yazilanlar pipeline degistiginde kaydi (orn. %38.5 -> %41.8).
+    facts = dict(
+        # ham veride NaN yok (01 raporu), dolayisiyla her NaN temizlik isi
+        invalid_pct=100 * (1 - kpi.n_valid.sum() / (len(kpi) * len(df))),
+        ooc_median=float(cap.ooc_pct.median()),
+        n_reliable_pairs=int(link.reliable.sum()),
+        # 05 raporundaki L1 ile ayni: guvenilir ciftlerde en sik tepe lag'i
+        delay_mode=int(rel.best_lag.value_counts().sort_index().idxmax()),
+        # en cok ayri sifir kesintisi olan output (ham veri, 01 raporu)
+        runs=quality.loc[quality.zero_runs.idxmax()],
+        # ambient'lerin en hizli guncellenen (K4)
+        ambient_period=float(a1[a1.role == "ambient"].update_period_s.min()),
+        # V2: output basina tutma orani, sonra ortalama (08 raporu ile ayni)
+        v2_hold=float(((piv == "EVET").sum(axis=1)
+                       / piv.notna().sum(axis=1)).mean()),
+        v3=v3,
+        param_bin=pd.qcut(df[EMPIRICAL_PARAM], 4,
+                          duplicates="drop").cat.categories[0],
+    )
 
     eff = observed_effects(df, cpps, targets)
     write_report(df, kpi, eff, fold, cpps, block_len, targets, facts)
@@ -133,6 +168,29 @@ def write_report(df, kpi, eff, fold, cpps, block_len, targets, facts):
     L = []
     w = L.append
     ins = kpi[kpi.in_scope == "evet"]
+    n_bias = int((ins.error_type == "bias").sum())
+    n_var = int((ins.error_type == "variability").sum())
+    # rapor Turkce binlik ayraci kullaniyor: 14.088
+    n_rows = f"{len(df):,}".replace(",", ".")
+    hours = len(df) / SAMPLING_HZ / 3600
+    param = EMPIRICAL_PARAM.replace(".C.Actual", "")
+    pbin = facts["param_bin"]
+    # V1 tanimi (08 raporu): fold 1 yetersiz train, yorum disi
+    v1 = fold[fold.fold > 1].groupby("output").skill_vs_pers
+    n_stable = int(v1.apply(lambda s: bool((s > 0).all())).sum())
+    v3 = facts["v3"]
+    v3_top = v3.loc[v3.kayma_sigma.idxmax()]
+    # R6 ile (dusuk gecerli veri) kapsam disi kalan output'lar, stage bazinda
+    low_valid = kpi[(kpi.in_scope != "evet")
+                    & (kpi.valid_pct < 100 * MIN_VALID_RATIO)].output
+    by_stage = {}
+    for o in low_valid:
+        stage, m = o.split(".")
+        by_stage.setdefault(stage, []).append(m)
+    low_valid_txt = ", ".join(f"`{s}.{'/'.join(ms)}`" for s, ms in by_stage.items())
+    worst_valid = kpi.loc[kpi.valid_pct.idxmin()]
+    runs = facts["runs"]
+    n_doe = 2 ** (len(cpps) - 1)
 
     w("# Faz 5 - Endustriyel Yorum ve Veri Toplama Onerisi\n")
     w("Uretildi: `python src/analysis/recommendations.py`\n")
@@ -148,21 +206,23 @@ def write_report(df, kpi, eff, fold, cpps, block_len, targets, facts):
     w("| # | Bulgu | Guven | Neden |")
     w("|---|---|---|---|")
     w("| 1 | `Machine4.Temperature4` = `Machine4.Pressure` (ozdes kolon) | "
-      "**yuksek** | 14.088 satirin tamaminda birebir; yorum gerektirmiyor |")
+      f"**yuksek** | {n_rows} satirin tamaminda birebir; yorum gerektirmiyor |")
     w(f"| 2 | Output'larin %{facts['invalid_pct']:.0f}'u sensor dropout (sifir/underflow) | "
       "**yuksek** | dogrudan sayim, model yok |")
-    w("| 3 | 14 output bias-baskin, 9 variability-baskin | "
+    w(f"| 3 | {n_bias} output bias-baskin, {n_var} variability-baskin | "
       "**yuksek** | dogrudan hesap; bias/variability ayrisimi kararli |")
     w("| 4 | Rastgele split R2 0.97 -> dogru split -6.89 | "
       "**yuksek** | tekrarlanabilir, yontemsel |")
     w("| 5 | Karar degiskenleri deviation'i aciklamiyor | "
       "**yuksek** | hem dogrusal hem dogrusal olmayan modellerde |")
-    w("| 6 | Stage1 -> Stage2 gecikme ~270 sn | "
+    w(f"| 6 | Stage1 -> Stage2 gecikme ~{facts['delay_mode']} sn | "
       f"**orta** | {facts['n_reliable_pairs']} ciftte tepe; dagilim tek tepeli degil |")
-    w("| 7 | `Machine4.Pressure` 14-17 daha iyi | "
-      "**dusuk** | V2: zaman parcalarinin %57'sinde tutuyor |")
-    w("| 8 | 5 output'ta model persistence'i geciyor | "
-      "**cok dusuk** | V1: walk-forward'da hicbiri tum fold'larda pozitif degil |")
+    w(f"| 7 | `{param}` {pbin.left:.0f}-{pbin.right:.0f} daha iyi | "
+      f"**dusuk** | V2: zaman parcalarinin %{100 * facts['v2_hold']:.0f}'sinde tutuyor |")
+    stable_txt = ("hicbiri tum fold'larda pozitif degil" if n_stable == 0 else
+                  f"yalnizca {n_stable}'i tum fold'larda pozitif")
+    w(f"| 8 | {len(targets)} output'ta model persistence'i geciyor | "
+      f"**cok dusuk** | V1: walk-forward'da {stable_txt} |")
     w("")
     w("> **Bu tablo projenin en durust ciktisi.** Bir bulguyu \"guclu\" diye")
     w("> sunmak kolay; hangi bulgunun ne kadar tasidigini soylemek zor.")
@@ -178,7 +238,8 @@ def write_report(df, kpi, eff, fold, cpps, block_len, targets, facts):
             ascending=False).index).head(3)
 
     w("### A1 — Bias-baskin output'larda setpoint/kalibrasyon gozden gecirilsin\n")
-    w("**Bulgu:** 25 kapsam ici output'un 14'unde hatanin %60'tan fazlasi")
+    w(f"**Bulgu:** {len(ins)} kapsam ici output'un {n_bias}'unde hatanin "
+      f"%{BIAS_BAND[1]:.0f}'tan fazlasi")
     w("merkezleme kaymasindan geliyor. En uclar:\n")
     for _, r in bias_top.iterrows():
         w(f"- `{r.output}`: hedef {r.setpoint}, gerceklesen sapma "
@@ -189,7 +250,7 @@ def write_report(df, kpi, eff, fold, cpps, block_len, targets, facts):
     w("parametresi oynatarak duzeltilecek bir sey degil -- ya setpoint yanlis")
     w("girilmis, ya olcum sistemi kaymis (kalibrasyon), ya da hedef degeri")
     w("gercekci degil.\n")
-    w("**Aksiyon:** Bu 14 output icin setpoint kaydi ve olcum cihazi")
+    w(f"**Aksiyon:** Bu {n_bias} output icin setpoint kaydi ve olcum cihazi")
     w("kalibrasyonu kontrol edilsin. Once `Stage1.M1` ve `Stage2.M1` -- ikisi de")
     w("hedefin ~%40 altinda ve hatalarinin %98'i bias.\n")
     w("**Beklenen etki:** Kalibrasyon kaymasiysa dogrudan ve buyuk; ayar")
@@ -203,22 +264,30 @@ def write_report(df, kpi, eff, fold, cpps, block_len, targets, facts):
     w(f"**Bulgu:** Output olcum hucrelerinin **%{facts['invalid_pct']:.1f}**'si gecersiz:")
     w("tam sifirlar, float-underflow degerleri ve negatifler (kural bazinda dokum:")
     w("`02_cleaning_report.md`).")
-    w("`Stage1.M5` gecerli verisinin yalnizca %4.6'sina sahip.\n")
+    w(f"`{worst_valid.output}` gecerli verisinin yalnizca "
+      f"%{worst_valid.valid_pct:.1f}'sina sahip.\n")
     w("**Muhendislik yorumu:** Sifirlar tek bir durus blogunda degil, yuzlerce")
-    w("kisa kesinti halinde (`Stage1.M14` -> 673 ayri kesinti). Bu bir uretim")
+    w(f"kisa kesinti halinde (`{runs.output}` -> {runs.zero_runs} ayri kesinti). Bu bir uretim")
     w("durusu deseni degil, **olcum sistemi guvenilirligi** sorunudur.")
     w("Underflow degerleri ise veri toplama zincirinde bir sayisal hataya")
     w("isaret ediyor -- gercek bir olcum `1e-306` olamaz.\n")
-    w("**Aksiyon:** 4 output (`Stage1.M5/M7/M11`, `Stage2.M4`) analiz disi")
+    w(f"**Aksiyon:** {len(low_valid)} output ({low_valid_txt}) analiz disi")
     w("kaldi. Bu sensorlerin bakimi/degisimi olmadan o olcumler hakkinda hicbir")
     w("sey soylenemez. Underflow icin veri toplama yazilimi incelensin.\n")
-    w("**Beklenen etki:** Analiz kapsamini 25'ten 29 output'a cikarir.\n")
+    w(f"**Beklenen etki:** Analiz kapsamini {len(ins)}'ten "
+      f"{len(ins) + len(low_valid)} output'a cikarir.\n")
     w("**Risk:** Yok. Veri kalitesi duzeltmesi.\n")
 
     w("### A3 — Ozdes kolon cifti duzeltilsin\n")
-    w("**Bulgu:** `Machine4.Temperature4` ile `Machine4.Pressure` 14.088 satirin")
-    w("tamaminda birebir ayni. Deger araligi (14-25) diger Machine 4")
-    w("sicakliklariyla (260-396) uyumsuz, basincla uyumlu.\n")
+    # Temperature4 clean_v1'de dusuruldu (R3); Pressure ile ozdes oldugu icin
+    # araligi Pressure'dan okunur
+    p = df["Machine4.Pressure.C.Actual"]
+    m4_temps = [c for c in df.columns
+                if c.startswith("Machine4.Temperature") and c.endswith(".C.Actual")]
+    w(f"**Bulgu:** `Machine4.Temperature4` ile `Machine4.Pressure` {n_rows} satirin")
+    w(f"tamaminda birebir ayni. Deger araligi ({p.min():.0f}-{p.max():.0f}) diger Machine 4")
+    w(f"sicakliklariyla ({df[m4_temps].min().min():.0f}-{df[m4_temps].max().max():.0f}) "
+      "uyumsuz, basincla uyumlu.\n")
     w("**Muhendislik yorumu:** Bir etiketleme/kopyalama hatasi. Ya iki tag ayni")
     w("kaynagi okuyor ya da biri yanlis adlandirilmis.\n")
     w("**Aksiyon:** Historian tag esleme tablosu kontrol edilsin.\n")
@@ -226,9 +295,11 @@ def write_report(df, kpi, eff, fold, cpps, block_len, targets, facts):
     w("multicollinearity ve sisirilmis feature importance uretir.\n")
 
     w("### A4 — Sabit setpoint yerine periyodik yeniden kalibrasyon\n")
-    w("**Bulgu (V3):** 5 output'un 3'unde, 4 saatlik pencere icindeki pencere")
+    # esik 1.0 = "kendi std'sinden buyuk" (validation.py V3 ile ayni)
+    w(f"**Bulgu (V3):** {len(v3)} output'un {int((v3.kayma_sigma > 1.0).sum())}'unde, "
+      f"{hours:.0f} saatlik pencere icindeki pencere")
     w("ortalamalari arasi kayma, serinin kendi standart sapmasindan **buyuk**")
-    w("(`Stage2.M9`: 2.29 sigma).\n")
+    w(f"(`{v3_top.output}`: {v3_top.kayma_sigma:.2f} sigma).\n")
     w("**Muhendislik yorumu:** Proses merkezi gurultuden daha hizli kayiyor.")
     w("Bir donemde dogru olan ayar, saatler sonra merkezi kaymis olur.\n")
     w("**Aksiyon:** \"Su degere ayarlayin\" turu sabit oneriler yerine")
@@ -242,7 +313,7 @@ def write_report(df, kpi, eff, fold, cpps, block_len, targets, facts):
     w("Bu bolum projenin en pratik ciktisidir: **veri neden yetmedi ve ne kadar")
     w("gerekir?**\n")
     w(f"Aktif CPP'lerin otokorelasyonu ~{block_len} satir (≈"
-      f"{block_len/60:.0f} dakika) boyunca sonmuyor (V0). Yani 14.088 satirlik")
+      f"{block_len/60:.0f} dakika) boyunca sonmuyor (V0). Yani {n_rows} satirlik")
     w(f"veri, bu parametreler acisindan yaklasik **{len(df)//block_len} bagimsiz")
     w("blok** demek. Optimizasyonun ogrenmesi gereken kontrast burada ve orada")
     w("bir avuc gozlem var.\n")
@@ -283,7 +354,7 @@ def write_report(df, kpi, eff, fold, cpps, block_len, targets, facts):
         w("")
         w("> **BULGU N1 - Gozlemsel veri bekleyerek bu is cozulmez.** Prosesi")
         w("> kendi haline birakip veri biriktirmek, otokorelasyon nedeniyle")
-        w("> saatte yalnizca ~2 bagimsiz gozlem uretiyor.")
+        w(f"> saatte yalnizca ~{3600 * SAMPLING_HZ / block_len:.0f} bagimsiz gozlem uretiyor.")
         w(">")
         w("> **DOE ayni bilgiyi mertebe kucuk surede verir.** Fark yontemden")
         w("> geliyor: parametre bilincli olarak degistirildiginde otokorelasyon")
@@ -293,25 +364,28 @@ def write_report(df, kpi, eff, fold, cpps, block_len, targets, facts):
 
     w("### Onerilen deney tasarimi\n")
     w(f"**{len(cpps)} faktor, 2 seviye, yarim-kesir faktoriyel "
-      f"(2^{len(cpps)}⁻¹ = {2**(len(cpps)-1)} kosul)**\n")
+      f"(2^{len(cpps)}⁻¹ = {n_doe} kosul)**\n")
     w("| faktor | mevcut aralik | onerilen dusuk | onerilen yuksek |")
     w("|---|---|---|---|")
     for c in cpps:
         lo, hi = float(df[c].min()), float(df[c].max())
         span = hi - lo
         w(f"| `{c.replace('.C.Actual','')}` | {lo:.2f} – {hi:.2f} | "
-          f"{lo - 0.25*span:.2f} | {hi + 0.25*span:.2f} |")
+          f"{lo - DOE_EXTEND*span:.2f} | {hi + DOE_EXTEND*span:.2f} |")
     w("")
-    w("> Onerilen seviyeler mevcut araligin **%25 disina** tasiyor. Bunun iki")
+    w(f"> Onerilen seviyeler mevcut araligin **%{100 * DOE_EXTEND:.0f} disina** "
+      "tasiyor. Bunun iki")
     w("> nedeni var: (1) etki buyuklugu aralikla birlikte buyur, (2) mevcut")
     w("> aralik zaten prosesin rahat oldugu bolge -- kontrast orada yok.")
     w(">")
     w("> **Bu seviyeler proses guvenligi ve urun kalitesi acisindan proses")
     w("> muhendisi tarafindan onaylanmadan uygulanmamalidir.** Buradaki")
     w("> oneri istatistikseldir, fiziksel fizibilite degerlendirmesi degildir.\n")
-    w("Her kosu ~5 dakika (K13: transport delay ~270 sn + dengelenme payi),")
-    w(f"{2**(len(cpps)-1)} kosul x 3 replikasyon = "
-      f"**{2**(len(cpps)-1)*3} kosu ≈ {2**(len(cpps)-1)*3*5/60:.0f} saat**")
+    w(f"Her kosu ~{RUN_SECONDS / 60:.0f} dakika (K13: transport delay "
+      f"~{facts['delay_mode']} sn + dengelenme payi),")
+    w(f"{n_doe} kosul x {N_REPLICATES} replikasyon = "
+      f"**{n_doe * N_REPLICATES} kosu ≈ "
+      f"{n_doe * N_REPLICATES * RUN_SECONDS / 3600:.0f} saat**")
     w("net deney suresi.\n")
 
     # ---- 4. Izleme ----
@@ -326,15 +400,19 @@ def write_report(df, kpi, eff, fold, cpps, block_len, targets, facts):
     w("vadede gecmis degerlerinden tahmin edilebiliyor. Bu, optimizasyon icin")
     w("kullanilamaz ama **bir sonraki periyodu ongoren erken uyari** icin")
     w("kullanilabilir.\n")
-    w("**Veri toplama:** Ambient kosullari ~350 sn'de bir guncelleniyor (K4);")
-    w("4 saatte ~40 bagimsiz gozlem. Bu degiskenlerin etkisi arastirilacaksa")
+    amb = facts["ambient_period"]
+    w(f"**Veri toplama:** Ambient kosullari ~{round(amb, -1):.0f} sn'de bir "
+      "guncelleniyor (K4);")
+    w(f"{hours:.0f} saatte ~{len(df) / SAMPLING_HZ / amb:.0f} bagimsiz gozlem. "
+      "Bu degiskenlerin etkisi arastirilacaksa")
     w("ornekleme sikligi artirilmali veya cok daha uzun sureli veri toplanmali.\n")
 
     # ---- 5. Limitler ----
     w("## 5. Limitler\n")
     w("| Limit | Etkisi |")
     w("|---|---|")
-    w("| Veri tek bir 3,9 saatlik pencereden | Long-term capability, vardiya "
+    hours_txt = f"{hours:.1f}".replace(".", ",")   # ondalik virgul: 3,9
+    w(f"| Veri tek bir {hours_txt} saatlik pencereden | Long-term capability, vardiya "
       "ve mevsim etkisi analiz edilemez |")
     w("| Gozlemsel veri, deney degil | Hicbir bulgu nedensellik iddia edemez |")
     w("| Spec limitleri yok | Cp/Cpk mutlak yorumlanamaz, yalnizca siralama |")

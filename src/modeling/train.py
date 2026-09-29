@@ -16,7 +16,7 @@ elde edip "prosesi anladik" sanmak en kolay tuzak.
 
 BASELINE'A GORE RAPORLAMA
 -------------------------
-Ham R2 bu veride yaniltici. Otokorelasyon 0.93-0.99 oldugu icin "onceki degeri
+Ham R2 bu veride yaniltici. Otokorelasyon yuksek oldugu icin "onceki degeri
 tekrarla" (persistence) tahmini cok gucludur. Her model iki baseline ile
 karsilastirilir ve **beceri skoru** raporlanir:
 
@@ -273,7 +273,8 @@ def write_report(res, imp, ins, demo, demo_target, embargo, dvs, measured, dfe):
         r = demo[key]
         w(f"| {lab} | {r['r2']:.4f} | {r['rmse']:.4f} |")
     w("")
-    w("> **BULGU M1 - Rastgele split %97'lik sahte bir basari uretiyor.**")
+    w(f"> **BULGU M1 - Rastgele split %{100 * demo['random']['r2']:.0f}'lik "
+      "sahte bir basari uretiyor.**")
     w(f"> Ayni model dogru bolmede R2 = {demo['embargo']['r2']:.2f} veriyor, yani")
     w("> sabit ortalama tahminden bile kotu. Aradaki fark modelin degil,")
     w("> **degerlendirme yonteminin** sonucu: rastgele bolmede test satirinin")
@@ -294,10 +295,13 @@ def write_report(res, imp, ins, demo, demo_target, embargo, dvs, measured, dfe):
     best_s1 = s1.loc[s1.groupby("output").skill_vs_mean.idxmax()]
     pos_mean = int((best_s1.skill_vs_mean > 0).sum())
     pos_pers = int((best_s1.skill_vs_pers > 0).sum())
+    # Okuma notundaki ornek: tablonun ilk satiri (skill_vs_mean'e gore en iyi)
+    top_s1 = best_s1.sort_values("skill_vs_mean", ascending=False).iloc[0]
 
     w("## S1 - Karar degiskenleri deviation'i acikliyor mu?\n")
     w("### Once bir okuma notu: R2 neden negatif, skill neden pozitif?\n")
-    w("Asagidaki tabloda `r2 = -2.04` ile `skill_vs_mean = +0.79` yan yana")
+    w(f"Asagidaki tabloda `r2 = {top_s1.r2:.2f}` ile "
+      f"`skill_vs_mean = {top_s1.skill_vs_mean:+.2f}` yan yana")
     w("gorunuyor. Celiski degil; iki olcut **farkli referans** kullaniyor:\n")
     w("- `R2`, test blogunun **kendi ortalamasini** referans alir. Ama o ortalama")
     w("  gercek hayatta bilinmez -- gelecegi bilmek demektir.")

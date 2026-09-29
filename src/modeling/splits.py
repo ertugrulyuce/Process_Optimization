@@ -5,7 +5,7 @@ Bu modul projenin en kolay hata yapilan noktasini kapatiyor (K5).
 
 NEDEN RASTGELE SPLIT YASAK
 --------------------------
-Lag-1 otokorelasyon 0.93-0.99. Rastgele split'te test satirinin komsulari
+Karar degiskenlerinde lag-1 otokorelasyon medyani ~0.99. Rastgele split'te test satirinin komsulari
 train'de olur; model "tahmin" degil "hatirlama" yapar ve R2 sahte sekilde
 yukselir. Bu veri setiyle yapilan calismalarda en yaygin hata budur.
 

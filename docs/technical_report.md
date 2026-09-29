@@ -126,7 +126,8 @@ Bunların 103'ü negatif olduğu için R2'de sayılıyor, tabloda R8'e 82 kalıy
 
 ### Kırmızı çizgi: zaman-sıralı bölme
 
-Karar değişkenlerinde lag-1 otokorelasyon 0,93–0,99. Rastgele train/test split
+Karar değişkenlerinde lag-1 otokorelasyon medyanı 0,99; 24 değişkenin 21'inde
+0,9'un üstünde. Rastgele train/test split
 kullanılırsa test satırının komşuları train'de kalır ve model tahmin değil
 **hatırlama** yapar.
 

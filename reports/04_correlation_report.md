@@ -9,7 +9,7 @@ Uretildi: `python src/analysis/correlation.py`
 
 14.088 gozlemle siradan bir anlamlilik testi yapilirsa `r = 0.02` bile
 `p < 0.05` verir. Ama ardisik gozlemler bagimsiz degil (K5: lag-1
-otokorelasyon 0.93-0.99). Bartlett'in **tam** duzeltmesi:
+otokorelasyon medyani karar degiskenlerinde 0.99, output sapmalarinda 0.89). Bartlett'in **tam** duzeltmesi:
 
 ```
 n_eff = n / (1 + 2 * sum_k (1 - k/n) * rho_x(k) * rho_y(k))

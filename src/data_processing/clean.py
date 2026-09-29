@@ -22,7 +22,7 @@ import schema  # noqa: E402
 # K2: bu esigin altinda gecerli verisi olan output modellenemez (A3). Esik
 # audit.py'de tanimli; burada ayrica yazilirsa audit'in "modellenemez" listesi
 # ile R6 kapsami sessizce ayrisabilir.
-from audit import MIN_VALID_RATIO  # noqa: E402
+from audit import MIN_VALID_RATIO, sec_outputs  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 RAW = ROOT / "data" / "raw" / "continuous_factory_process.csv"
@@ -285,7 +285,9 @@ def write_report(df_raw: pd.DataFrame, df: pd.DataFrame, log: dict[str, Any],
     w(f"- **R8** NaN'a cevrilen imkansiz-kucuk deger: "
       f"**{log['R8_tiny_to_nan']:,}** hucre")
     w(f"- **R4** duplicate timestamp'li satir: {log['R4_dup_rows']} (silinmedi, isaretlendi)")
-    w("  <br>*Not:* audit raporu 14 diyor cunku `duplicated()` her tekrarin ilk")
+    # audit.sec_time ile ayni sayim (keep='first')
+    n_dup_audit = int(df_raw["time_stamp"].duplicated().sum())
+    w(f"  <br>*Not:* audit raporu {n_dup_audit} diyor cunku `duplicated()` her tekrarin ilk")
     w("  gorunumunu saymaz. Burada `keep=False` ile cakismanin **her iki tarafi**")
     w("  isaretleniyor; ayni olayin iki farkli sayimi.")
     w(f"- **R5** durus blogu satiri: {log['R5_downtime_rows']} (silinmedi, isaretlendi)")
@@ -314,10 +316,11 @@ def write_report(df_raw: pd.DataFrame, df: pd.DataFrame, log: dict[str, Any],
     w("artifaktlardan degil, o output'un setpoint'in cok altinda olctugu")
     w("donemlerden etkileniyor (A10).\n")
 
+    runs = sec_outputs(df_raw).set_index("output").zero_runs
     w("### Neden hicbir satir silinmedi?\n")
     w("Sifirlar tek bir durus blogunda toplanmis olsa satir bazli filtreleme")
     w("dogru olurdu. Ama audit gosterdi ki sifirlar yuzlerce kisa kesinti halinde")
-    w("dagilmis (Stage1.M14 -> 673 ayri kesinti) ve her output'ta FARKLI")
+    w(f"dagilmis ({runs.idxmax()} -> {runs.max()} ayri kesinti) ve her output'ta FARKLI")
     n_other = int((summary.in_scope == "evet").sum()) - 1
     w(f"satirlarda. Satir silmek, bir output'un dropout'u yuzunden diger {n_other}")
     w("output'un gecerli olcumunu de atmak demekti. Bunun yerine hucre bazli")
@@ -356,12 +359,17 @@ def write_report(df_raw: pd.DataFrame, df: pd.DataFrame, log: dict[str, Any],
     for _, r in summary[summary.in_scope != "evet"].iterrows():
         w(f"| `{r.output}` | {r.scope_reason} |")
     w("")
-    w("> **R7 neden gerekti:** `Stage2.M6`'nin setpoint'i 0.01, sapmasinin standart")
-    w("> sapmasi 0.197. Hedef, olcum gurultusunun yirmide biri kadar -- yani gercek")
-    w("> bir hedef degil, girilmemis/kullanilmayan bir alan. Ona bolununce bias")
-    w("> **%5295** cikiyordu ve output yanlislikla 'bias-baskin' siniflaniyordu.")
-    w("> Esik veriden dogruluyor: M6'nin abs(sp)/std orani 0.05, bir sonraki output")
-    w("> 3.79 -- arada buyuk bosluk var, kesim keyfi degil.\n")
+    r7 = summary[(summary.valid_pct >= MIN_VALID_RATIO * 100) & ~summary.sp_meaningful]
+    if len(r7):
+        r = r7.sort_values("sp_over_std").iloc[0]
+        next_ratio = summary[summary.sp_meaningful].sp_over_std.min()
+        w(f"> **R7 neden gerekti:** `{r.output}`'nin setpoint'i {r.setpoint}, sapmasinin")
+        w(f"> standart sapmasi {r.dev_std:.3f}. Hedef, olcum gurultusunun yalnizca")
+        w(f"> {r.sp_over_std} kati -- yani gercek bir hedef degil, girilmemis/kullanilmayan")
+        w(f"> bir alan. Ona bolununce bias **%{100 * r.bias / r.setpoint:.0f}** cikiyordu")
+        w("> ve output yanlislikla 'bias-baskin' siniflaniyordu.")
+        w(f"> Esik veriden dogruluyor: `{r.output}`'nin abs(sp)/std orani {r.sp_over_std},")
+        w(f"> bir sonraki output {next_ratio} -- arada buyuk bosluk var, kesim keyfi degil.\n")
 
     w("## Bulgular\n")
     w(f"> **Bias-baskin ({len(bias_dom)} adet)** - hatanin >%{hi:.0f}'i merkezleme")

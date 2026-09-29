@@ -152,9 +152,10 @@ def main():
         w(f"> %{zero_share:.0f}'i lag = 0'da tepe yapiyor; en sik tepe noktasi")
         w(f"> **{mode_lag} sn**, medyan **{med_lag:.0f} sn**.")
         w(">")
+        # 0-300 ve 265: ilk (eski) taramanin sonucu, mevcut LAGS'ten uretilemez.
         w("> **Bu tepe sinir artifakti degil.** Ilk tarama 0-300 sn araliginda")
         w("> yapildi ve tepeler 265 sn'de, yani ust sinira yapisik cikti -- bu")
-        w("> durumda gercek tepenin disarida olma ihtimali vardi. Aralik 900")
+        w(f"> durumda gercek tepenin disarida olma ihtimali vardi. Aralik {max(LAGS)}")
         w(f"> sn'ye genisletildiginde tepe {mode_lag} sn'de kaldi ve sinira")
         w(f"> dayanan cift sayisi {edge}'de sinirli. Yani gecikme gercek.")
         if zero_share > 50:
@@ -200,12 +201,13 @@ def main():
     else:
         w("*Guvenilir cift yok.*\n")
 
-    w("## Tam tablo (ilk 40, |r| azalan)\n")
+    n_full = 40
+    w(f"## Tam tablo (ilk {n_full}, |r| azalan)\n")
     cols = ["stage1", "stage2", "best_lag", "r", "r_at_lag0", "gain_over_lag0",
             "n", "n_eff", "reliable", "edge_peak"]
     w("| " + " | ".join(cols) + " |")
     w("|" + "|".join("---" for _ in cols) + "|")
-    for _, r in t.nlargest(40, "abs_r").iterrows():
+    for _, r in t.nlargest(n_full, "abs_r").iterrows():
         w("| " + " | ".join(str(r[c]) for c in cols) + " |")
     w("")
 

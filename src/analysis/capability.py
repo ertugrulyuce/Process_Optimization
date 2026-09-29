@@ -9,7 +9,7 @@ Kapsam ici 25 output icin:
 
 ONEMLI UYARI (raporda da ayrica isleniyor):
 I-MR kontrol grafigi ardisik gozlemlerin BAGIMSIZ oldugunu varsayar. Bu veride
-lag-1 otokorelasyonu 0.93-0.99 (K5). Otokorelasyonlu seride MR_bar kucuk cikar,
+output'larin lag-1 otokorelasyonu yuksek (K5). Otokorelasyonlu seride MR_bar kucuk cikar,
 kontrol limitleri gercekte olmasi gerekenden dar olur ve neredeyse her nokta
 "out of control" gorunur. Bu yuzden asagidaki out-of-control sayilari
 PROSES DEGIL, YONTEM ARTIFAKTIDIR ve oyle raporlanir.
@@ -111,7 +111,7 @@ def main():
     # Tanimsiz durumlar raporda aciklamasiz bos hucre ya da "Cpk = nan"
     # bulgusu olarak kalmasin diye ayrica toplaniyor. sigma_st tabloda
     # yuvarlandigi icin kontrol yuvarlamadan once yapiliyor.
-    rows, too_short, zero_spread = [], [], []
+    rows, too_short, zero_spread, lag1 = [], [], [], []
     for _, r in ins.iterrows():
         st, m = r.output.split(".")
         col = f"{st}.Output.Measurement{m[1:]}.U.Actual"
@@ -119,6 +119,7 @@ def main():
         if not s:
             too_short.append(r.output)
             continue
+        lag1.append(df[col].autocorr(1))
         if s["sigma_st"] == 0:
             zero_spread.append(r.output)
         rec = dict(output=r.output, setpoint=r.setpoint,
@@ -150,7 +151,9 @@ def main():
 
     w("## Onemli uyari - kontrol grafiklerinin gecerliligi\n")
     w("I-MR kontrol grafigi **ardisik gozlemlerin bagimsiz oldugunu varsayar.**")
-    w("Bu veride lag-1 otokorelasyonu 0.93-0.99 (K5). Otokorelasyonlu bir seride:\n")
+    lag1 = pd.Series(lag1)
+    w(f"Bu {len(lag1)} output'ta lag-1 otokorelasyonu medyan **{lag1.median():.2f}** "
+      f"(aralik {lag1.min():.2f}-{lag1.max():.2f}; K5). Otokorelasyonlu bir seride:\n")
     w("- Ardisik farklar kucuk oldugu icin `MR_bar` kucuk cikar,")
     w("- dolayisiyla `sigma_st` oldugundan kucuk tahmin edilir,")
     w("- kontrol limitleri gercekte olmasi gerekenden **dar** olur,")
@@ -201,10 +204,11 @@ def main():
     w("")
 
     mid = f"Cpk {list(SPEC_SCENARIOS)[1]}"
+    mid_tol = SPEC_SCENARIOS[list(SPEC_SCENARIOS)[1]]
     ranked = t.dropna(subset=[mid])
     worst = ranked.nsmallest(5, mid)
     w("> **BULGU C3 - En dusuk capability'ye sahip output'lar** (orta senaryo,")
-    w("> +/-%2 tolerans):")
+    w(f"> +/-%{100 * mid_tol:g} tolerans):")
     for _, r in worst.iterrows():
         w(f">   - `{r.output}` ({r.error_type}): Cpk = **{r[mid]}**")
     w(">")

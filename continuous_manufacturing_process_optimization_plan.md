@@ -78,7 +78,7 @@ değil, yüzlerce kısa kesinti hâlinde (Stage1.M14 → 673 kesinti).
 geçerli veri < %50. Silinmez, gerekçesiyle "kapsam dışı" listelenir.
 
 **Kapsam dışı (R7):** `Stage2.M6` — setpoint'i 0.01, sapmasının standart sapması
-0.197. Hedef, ölçüm gürültüsünün yirmide biri; gerçek bir hedef değil. Oransal
+0.196. Hedef, ölçüm gürültüsünün yirmide biri; gerçek bir hedef değil. Oransal
 KPI'ları tanımsız (bkz. A8).
 
 **Modellenebilir: 30 output'tan 25'i.**
@@ -208,7 +208,8 @@ optimizasyonu **9 variability-baskın output'a** odaklanacak.
 
 **K10 — Control chart bu veri için geçersiz araç.** Medyan out-of-control oranı
 **%41.8**; kararlı bir proseste ~%0.3 olmalı. Sebep proses değil yöntem: I-MR
-bağımsız gözlem varsayar, bu veride lag-1 otokorelasyon 0.93–0.99. `MR_bar`
+bağımsız gözlem varsayar, bu veride output'ların lag-1 otokorelasyonu medyan 0.89
+(0.37–0.99). `MR_bar`
 küçük çıkıyor → kontrol limitleri gerçekte olması gerekenden dar. **Kararlılık
 hükmü askıya alındı**; doğru araç, Faz 3'te model kurulduktan sonra artıklar
 üzerinde kontrol grafiği (residual chart) olacak.

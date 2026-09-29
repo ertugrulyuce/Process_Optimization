@@ -121,12 +121,13 @@ problemidir.** Ikisi farkli aksiyon gerektirir.
 | `Stage2.M4` | kapsam disi: gecerli veri %9.3 < %50 (R6) |
 | `Stage2.M6` | kapsam disi: setpoint anlamsiz, abs(sp)/std=0.05 < 1.0 (R7) |
 
-> **R7 neden gerekti:** `Stage2.M6`'nin setpoint'i 0.01, sapmasinin standart
-> sapmasi 0.197. Hedef, olcum gurultusunun yirmide biri kadar -- yani gercek
-> bir hedef degil, girilmemis/kullanilmayan bir alan. Ona bolununce bias
-> **%5295** cikiyordu ve output yanlislikla 'bias-baskin' siniflaniyordu.
-> Esik veriden dogruluyor: M6'nin abs(sp)/std orani 0.05, bir sonraki output
-> 3.79 -- arada buyuk bosluk var, kesim keyfi degil.
+> **R7 neden gerekti:** `Stage2.M6`'nin setpoint'i 0.01, sapmasinin
+> standart sapmasi 0.196. Hedef, olcum gurultusunun yalnizca
+> 0.05 kati -- yani gercek bir hedef degil, girilmemis/kullanilmayan
+> bir alan. Ona bolununce bias **%5296** cikiyordu
+> ve output yanlislikla 'bias-baskin' siniflaniyordu.
+> Esik veriden dogruluyor: `Stage2.M6`'nin abs(sp)/std orani 0.05,
+> bir sonraki output 3.79 -- arada buyuk bosluk var, kesim keyfi degil.
 
 ## Bulgular
 

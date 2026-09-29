@@ -46,6 +46,7 @@ RANDOM_STATE = 0
 N_SEARCH = 4000          # model-tabanli aramada denenen aday nokta
 MIN_BIN_N = 200          # ampirik analizde bir bolgenin sayilmasi icin min gozlem
 CV_ACTIVE = 1.0          # K7: aktif karar degiskeni esigi
+N_BINS = 4               # ampirik analizde istenen kantil dilimi sayisi
 
 
 class NoSolutionError(RuntimeError):
@@ -90,6 +91,12 @@ def target_outputs():
     return best[best.skill_vs_pers > 0].sort_values("skill_vs_pers", ascending=False)
 
 
+def n_scored_outputs():
+    """Faz 3'te S1 sorusuyla degerlendirilen output sayisi (hedeflerin paydasi)."""
+    r = pd.read_csv(RESULTS)
+    return int(r[r.feature_set == "controlled"].output.nunique())
+
+
 def fit_model(df, target, cpps, model_name):
     """Faz 3'te o output icin en iyi cikan modeli, ayni split ile yeniden kurar."""
     y = df[f"{target}.dev"]
@@ -123,7 +130,7 @@ def model_search(mdl, Xv, cpps, rng):
     return cand.iloc[best_i], float(pred[best_i])
 
 
-def empirical_regions(df, target, cpps, n_bins=4):
+def empirical_regions(df, target, cpps, n_bins=N_BINS):
     """
     Modele hic guvenmeden: her CPP'yi kantillere bolup o dilimde GERCEKLESEN
     performansi olcer. "Bu bolgede calisildiginda ne olmus?"
@@ -222,24 +229,28 @@ def main():
         sens_tables[name] = sensitivity_a1(df, name, t.model, cpps)
 
     opt = pd.DataFrame(opt_rows)
-    write_report(df, opt, emp_tables, sens_tables, cpps, targets)
+    write_report(df, opt, emp_tables, sens_tables, cpps, targets,
+                 n_outputs=n_scored_outputs())
     opt.to_csv(ROOT / "reports" / "optimization_points.csv", index=False)
     print(f"\nyazildi: {OUT}")
 
 
-def write_report(df, opt, emp_tables, sens_tables, cpps, targets):
+def write_report(df, opt, emp_tables, sens_tables, cpps, targets, n_outputs=None):
     L = []
     w = L.append
     def short(c):
         return (c.replace(".C.Actual", "")
                  .replace("FirstStage.CombinerOperation", "Combiner"))
+    # Payda Faz 3 sonuclarindan gelir; verilmediyse (test) bilinmiyor demektir
+    n_all = n_outputs if n_outputs is not None else "?"
 
     w("# Faz 4 - Dar Kapsamli Optimizasyon\n")
     w("Kaynak: `data/processed/clean_v1.csv`  ")
     w("Uretildi: `python src/optimization/optimize.py`\n")
 
     w("## Kapsam ve neden bu kadar dar\n")
-    w("Faz 3 (K15), karar degiskenlerinin 25 output'un yalnizca **5**'inde")
+    w(f"Faz 3 (K15), karar degiskenlerinin {n_all} output'un yalnizca "
+      f"**{len(opt)}**'inde")
     w("persistence baseline'ini gectigini gosterdi; hicbirinde R2 pozitif degil.")
     w("Optimizasyon bu yuzden tum prosese degil, yalnizca **modelin gercekten bir")
     w("sey yakaladigi output'lara** ve **gercekten oynatilmis parametrelere**")
@@ -260,7 +271,8 @@ def write_report(df, opt, emp_tables, sens_tables, cpps, targets):
     w("dayanak sayilmadi. Ayni soru modele hic guvenmeden de soruldu:\n")
     w("| Yol | Nasil | Guclu yani | Zayif yani |")
     w("|---|---|---|---|")
-    w("| **Model-tabanli** | egitilmis model uzerinde 4.000 aday nokta | "
+    n_search = f"{N_SEARCH:,}".replace(",", ".")   # 4000 -> "4.000"
+    w(f"| **Model-tabanli** | egitilmis model uzerinde {n_search} aday nokta | "
       "parametreleri birlikte degerlendirir | modelin R2'si negatif |")
     w("| **Ampirik** | gozlenen veride kantil bolgeleri | "
       "gercek olculere dayanir | parametreleri tek tek gorur |")
@@ -322,6 +334,8 @@ def write_report(df, opt, emp_tables, sens_tables, cpps, targets):
     agree = pd.DataFrame(agree_rows)
     # Asagidaki blok calismasa da sonuc tablosu bu listeyi okuyor.
     consistent = []
+    # Tutarli parametrelerin isaret testi ve goreli farklari; sonuc bolumu okuyor
+    sign_hits, rels = {}, []
     if not agree.empty:
         n_ok = int((agree.uzlasma == "EVET").sum())
         w("| output | parametre | model onerisi | ampirik en iyi dilim | uzlasma |")
@@ -424,12 +438,12 @@ def write_report(df, opt, emp_tables, sens_tables, cpps, targets):
             for p in consistent:
                 col = [c for c in cpps if short(c) == p][0]
                 try:
-                    q = pd.qcut(df[col], 4, duplicates="drop")
+                    q = pd.qcut(df[col], N_BINS, duplicates="drop")
                 except ValueError:
                     continue
                 vc = q.value_counts().sort_index()
                 shares = (100 * vc / vc.sum()).round(1)
-                w(f"**`{p}`** — istenen 4 dilim, olusan **{len(vc)}** "
+                w(f"**`{p}`** — istenen {N_BINS} dilim, olusan **{len(vc)}** "
                   "(bagli degerler nedeniyle). Dilim paylari: "
                   + ", ".join(f"%{s}" for s in shares) + ".\n")
                 w("| output | en iyi dilim | mutlak sapma | digerlerinin en iyisi | "
@@ -446,12 +460,14 @@ def write_report(df, opt, emp_tables, sens_tables, cpps, targets):
                     if rest.empty:
                         continue
                     rel = 100 * (rest.min() - g[best_iv]) / g[best_iv]
+                    rels.append(rel)
                     if str(best_iv) == str(g.index[0]):
                         same_dir += 1
                     w(f"| {o} | {best_iv} | {g[best_iv]:.4f} | {rest.min():.4f} | "
                       f"**+%{rel:.1f}** |")
                 w("")
                 n_out = len(emp_tables)
+                sign_hits[p] = (same_dir, n_out, q.cat.categories[0])
                 p_sign = 0.5 ** n_out if same_dir == n_out else np.nan
                 if same_dir == n_out:
                     w(f"> {n_out} output'un **{same_dir}'i de ayni dilimi** en iyi")
@@ -512,11 +528,13 @@ def write_report(df, opt, emp_tables, sens_tables, cpps, targets):
         if col_narrow and col_wide:
             drops = piv[piv[col_narrow[0]] < piv[col_wide[0]] - 0.05]
             if len(drops):
-                w("> **BULGU O5 - 5 CPP'ye daralmak bazi output'lara zarar veriyor.**")
+                w(f"> **BULGU O5 - {len(cpps)} CPP'ye daralmak bazi output'lara "
+                  "zarar veriyor.**")
                 for o, r in drops.iterrows():
                     w(f">   - `{o}`: dar set {r[col_narrow[0]]:+.3f} vs "
                       f"genis set {r[col_wide[0]]:+.3f}")
-                w("> Bu output'lar icin 5 aktif CPP yetersiz; tahmin gucu diger")
+                w(f"> Bu output'lar icin {len(cpps)} aktif CPP yetersiz; tahmin "
+                  "gucu diger")
                 w("> `controlled` kolonlardan geliyor. Optimizasyon onerisi bu")
                 w("> output'lar icin **gecerli sayilmamali** -- dar set uzerinde")
                 w("> kurulan arama, modelin zaten beceremedigi bir uzayda yapiliyor.\n")
@@ -525,7 +543,7 @@ def write_report(df, opt, emp_tables, sens_tables, cpps, targets):
     w("## Faz 4 sonucu\n")
     w("| Ne soruldu | Cevap |")
     w("|---|---|")
-    w(f"| Kac output icin optimizasyon kurulabildi? | {len(opt)} / 25 |")
+    w(f"| Kac output icin optimizasyon kurulabildi? | {len(opt)} / {n_all} |")
     if not agree.empty:
         w(f"| Model ve ampirik yol uzlasti mi? | {n_ok}/{len(agree)} durumda (%{pct:.0f}) |")
     w("| Output'lar arasi tutarli parametre | "
@@ -535,10 +553,17 @@ def write_report(df, opt, emp_tables, sens_tables, cpps, targets):
     w("**Dürüst ozet:** Bu veriden \"su parametreleri su degerlere cekin, sapma")
     w("su kadar azalir\" turu bir oneri **cikmiyor.** Cikan sey daha mutevazi ama")
     w("gercek:\n")
-    w("1. Proses zaten iyi calistigi bolgede duruyor; `Machine4.Pressure` icin")
-    w("   5 output'un 5'i de mevcut ana calisma araligini (14–17) en iyi buluyor.")
-    w("   Bu bir **kesif** degil, mevcut ayarin **dogrulanmasi**dir.")
-    w("2. Etki buyuklukleri kucuk (%2–26) ve gozlemsel; nedensellik iddia edilemez.")
+    if sign_hits:
+        # Ilk tutarli parametre; "ana calisma araligi" onun en dusuk dilimi
+        p0, (k0, n0, iv0) = next(iter(sign_hits.items()))
+        w(f"1. Proses zaten iyi calistigi bolgede duruyor; `{p0}` icin")
+        w(f"   {n0} output'un {k0}'i de mevcut ana calisma araligini "
+          f"({iv0.left:.0f}–{iv0.right:.0f}) en iyi buluyor.")
+        w("   Bu bir **kesif** degil, mevcut ayarin **dogrulanmasi**dir.")
+    else:
+        w("1. Output'lar arasi tutarli bir calisma bolgesi bulunamadi (BULGU O3).")
+    effect = f" (%{min(rels):.0f}–{max(rels):.0f})" if rels else ""
+    w(f"2. Etki buyuklukleri kucuk{effect} ve gozlemsel; nedensellik iddia edilemez.")
     w("3. Asil kisit veri: 4 saatlik pencerede karar degiskenleri yeterince")
     w("   oynatilmamis (K7), dolayisiyla optimizasyonun ogrenecegi kontrast yok.\n")
     w("> **Faz 5'e devredilen:** Bu sonucun kendisi bir bulgudur. Optimizasyonun")
